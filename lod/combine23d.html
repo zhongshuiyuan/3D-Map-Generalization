@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>23D</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.47.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.47.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        .map {
+        	width: 100%;
+        }
+        #map1 { 
+        	position:absolute; 
+        	top:0; 
+        	height: 30%
+        }
+        #map2 {
+        	position: absolute;
+        	bottom: 0;
+        	height: 70%
+        }
+    </style>
+</head>
+<body>
+<div id='map1' class='map'></div>
+<div id='map2' class='map'></div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiYXJzbHh5IiwiYSI6ImNqZzRzemViajJ4MWUzM3Bjc3Z2M283ajMifQ.VuhGIVxu7Y9H7V4gUxTMdw';
+var map1 = new mapboxgl.Map({
+    container: 'map1',
+    style: 'mapbox://styles/mapbox/streets-v9',
+    center: [-73.952,40.782],
+    zoom: 13
+});
+
+var map2 = new mapboxgl.Map({
+    container: 'map2',
+    style: 'mapbox://styles/mapbox/streets-v9',
+    center: [-73.952,40.782],
+    zoom: 13,
+    pitch:50,
+    pitchWithRotate:false
+});
+</script>
+
+</body>
+</html>

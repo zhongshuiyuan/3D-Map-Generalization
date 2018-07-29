@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>上海-调参综合</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' />
+    <script type="text/javascript" src="https://www.mapbox.com/bites/00295/globe.js"></script>
+    <script type="text/javascript" src="https://www.mapbox.com/bites/00295/colorpicker.js"></script>
+    <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
+    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <style>
+        body { 
+            margin:0; 
+            padding:0; 
+        }
+        #map { 
+            position:absolute; 
+            top:0; 
+            bottom:0; 
+            width:100%; 
+        }
+        .panel {
+            background-color: #404040;
+            color: #fff;
+            border-radius: 3px;
+            width: 25%;
+            max-width: 300px;
+            position: relative;
+            left:10px;
+            top:10px;
+            padding: 10px;
+            font-family: 'Open Sans', sans-serif;  
+        }  
+        #menu p {
+            margin: 2px;/*缩小行间距节约空间*/
+        }
+        #menu button {
+            margin: 2px;
+        }  
+        .controlPanel {
+            display: none;/*点了各自按钮才显示*/
+        }
+        .grabby {
+            cursor: -webkit-grab;
+            cursor: -moz-grab;
+            cursor: grab;
+        }
+        .grabbed {
+            cursor: -webkit-grabbing;
+            cursor: -moz-grabbing;
+            cursor: grabbing;
+        }
+        .crosshair {
+            cursor: -webkit-crosshair;
+            cursor: -moz-crosshair;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body>
+<div id='map'></div>
+
+<div id='menu' class="panel">
+    <!--切换底图功能暂时去掉，没有多大用-->
+    <!--<input id='basic' type='radio' name='rtoggle' value='basic'>
+    <label for='basic'>basic</label>
+    <input id='streets' type='radio' name='rtoggle' value='streets'>
+    <label for='streets'>streets</label>
+    <input id='bright' type='radio' name='rtoggle' value='bright'  checked='checked'>
+    <label for='bright'>bright</label>
+    <input id='light' type='radio' name='rtoggle' value='light'>
+    <label for='light'>light</label>
+    <input id='dark' type='radio' name='rtoggle' value='dark'>
+    <label for='dark'>dark</label>
+    <input id='satellite' type='radio' name='rtoggle' value='satellite'>
+    <label for='satellite'>satellite</label>-->    
+    <p>说明：L1~L9图层分别在zoom=15.5、15.0、...、12.0</p>
+    <p id="xixi">zoom:xxx;     layer:xxx;</p>
+    <button id="noiseControl">噪音</button>
+    <button id="lightControl">光照</button>
+    <button id="cloudControl">云雾</button>
+</div>
+
+<div id="noiseControlPanel" class="controlPanel panel">
+    <input type="checkbox" id="noise_road">道路<br/>
+    <input type="checkbox" id="road_noise">道路噪音<br/>
+    <input type="checkbox" id="noise_point">点<br/>
+    <input type="checkbox" id="point_noise">点噪音<br/>
+</div>
+
+<div id='lightControlPanel' class='controlPanel panel'>
+    <div class='col12 clearfix'>
+        <span>强度</span>
+        <fieldset>
+            <input class='col12' id='intensity' type='range' value='0.5' min='0' max='1' step='0.01'>
+        </fieldset>
+    </div>
+    <div class='col12 clearfix'>
+        <span>颜色</span>
+        <div style='padding:5px 0px;' id='canv'></div>
+        <span>方向</span>
+        <div style='padding:5px 0px;' id='globe'></div>
+    </div>
+</div>
+
+<div id="cloudControlPanel" class="controlPanel panel">
+    <p>这部分待集成进来</p>
+</div>
+<script src="init.js"></script>
+</body>
+</html>

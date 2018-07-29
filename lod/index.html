@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>LOD based on distance</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox.js/plugins/turf/v2.0.2/turf.min.js'></script>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+        #menu {
+            position: absolute;
+            background: #fff;
+            padding: 10px;
+            font-family: 'Open Sans', sans-serif;
+            /*display: none;*/
+        }
+        #loadingMessage {
+            position: absolute;
+            left: 50%; 
+            top: 50%;
+            transform: translate(-50%, -50%); 
+        }
+    </style>
+</head>
+<body>
+<div id='map'></div>
+<div id='menu'>
+    <p id="position"></p>
+</div>
+<div id="loadingMessage">正在传输数据，请稍等...</div>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoicGFuY2FrZSIsImEiOiJjajgxc2hqemUwMjNpMndtaWU1cHRhcDJvIn0.AkD8g3KIKm865IhQjGuP1A';
+var map = new mapboxgl.Map({
+    container: 'map', 
+    style: 'mapbox://styles/mapbox/streets-v9',
+    center: [-73.952,40.782], 
+    zoom: 13.5,
+    pitch: 50,
+    bearing:0,
+    hash:false,
+    pitchWithRotate:false//锁定pitch，近处强制显示3D
+});
+
+//用来比较位置是否有改变
+var oldPosition={
+    center:map.getCenter(),
+    zoom:map.getZoom(),
+    pitch:map.getPitch(),
+    bearing:map.getBearing()
+};
+
+var file="LOD_simplify_merge_child_id.geojson";
+var features;//所有建筑
+var buildingObj={};//存放所有建筑，key是id方便访问
+var farDis=3;//两个圆，常量，km
+var closeDis=2;
+
+//初始化，添加建筑、两个圆、视点等
+map.on('load', function () {
+    map.addSource('Manhattan',{
+        'type': 'geojson',
+        'data': file
+    });
+
+    map.addLayer({
+        'id': 'Manhattan-extrusion',
+        'type': 'fill-extrusion',
+        'source': 'Manhattan',        
+        'layout': {},
+        'paint': {
+            'fill-extrusion-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'height'],
+                0, 'rgb(255,255,191)',
+                75, 'rgb(253,174,97)',
+                150, "rgb(215,25,28)",
+            ],
+            //从feature-state获取高度，改变会即时生效，设为真实高度或0（即隐藏）
+            // 'fill-extrusion-height': ["feature-state", "height"],
+            'fill-extrusion-height': ["get", "height"],//在给每个要素设置了feature-state之前先用属性值
+            'fill-extrusion-opacity': 0.8//该属性针对图层，不能控制到每个要素
+        },
+        //"filter": ["all",["==", "lv", 3]]
+    });
+    
+    //计算视点的坐标
+    var bounds=map.getBounds();
+    var basePoint=new Array(2);
+    //basePoint[0]=(bounds._sw.lng+bounds._ne.lng)/2;//这个歪了
+    basePoint[0]=map.getCenter().lng;
+    basePoint[1]=bounds._sw.lat;
+    
+    //画两个圆，表示距离远近
+    drawCircle("farCircle",basePoint,farDis,"red");
+    drawCircle("closeCircle",basePoint,closeDis,"blue");
+    
+    // 添加一个相机的标志，表示视点
+    map.addSource('view-point', {
+        "type": "geojson",
+        "data": {
+            "type": "Point",
+            "coordinates": basePoint
+        }
+    });    
+    map.addLayer({
+        "id": "view-point",
+        "source": "view-point",
+        "type": "symbol",
+        "layout": {
+            "icon-image": "attraction-15",
+            "icon-rotation-alignment": "map",
+            "icon-offset":[0,-10]
+        }
+    });
+});
+
+//建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
+map.on("sourcedata",function(e){
+    if (e.source.data===file&&e.sourceDataType!=="metadata"&&map.isFirst===undefined){
+        //注意：这里只能获取viewport范围内的要素，一开始的zoom要够大
+        map.isFirst=true;//if里面的步骤只执行一次 还有别的办法吧，这种不好
+        features=map.querySourceFeatures('Manhattan');//注意：是source的id，不是Layer的
+        if (features) {
+            var uniqueFeatures = getUniqueFeatures(features, "OBJECTID");
+            //根据id，给每个要素设置一个高度，真实高度或0
+            for (var i in uniqueFeatures){
+                var height=uniqueFeatures[i].properties.height;
+                var id=uniqueFeatures[i].properties.OBJECTID;
+                map.setFeatureState({source: 'Manhattan', id: id},{ height: height});
+                //把所有建筑存入buildingObj里
+                key=uniqueFeatures[i].properties.id;
+                buildingObj[key]=uniqueFeatures[i];
+            }
+        }
+        //一开始先用properties设置高度，setFeatureState完了之后再改用feature-state
+        map.setPaintProperty("Manhattan-extrusion","fill-extrusion-height",["feature-state", "height"]);//这个可能还会触发一次sourcedata事件
+        changeBuildings(features);
+    }    
+});
+
+//实时查看地图是否动了
+setInterval("changeInfo()",50);
+var isFirst=true;
+function changeInfo(){
+    if (isFirst&&map.getSource("Manhattan")&&map.isSourceLoaded("Manhattan")===true){
+        var divLoadingMessage=document.getElementById("loadingMessage");
+        divLoadingMessage.style.display="none";
+        isFirst=false;//if里面的代码只执行一次 其实就算每次都执行也无所谓 没找到合适的事件
+    }
+
+    //当前地图位置
+    var currPosition={
+        center:map.getCenter(),
+        zoom:map.getZoom(),
+        pitch:map.getPitch(),
+        bearing:map.getBearing()
+    };
+    //判断相机位置是否改变
+    var unchanged = JSON.stringify(currPosition) === JSON.stringify(oldPosition);
+    if (unchanged) return;//地图没改变则返回，改动了继续执行后面的    
+    oldPosition=currPosition;
+    //显示当前相机位置
+    var pPosition=document.getElementById("position");
+    pPosition.innerText="center:"+currPosition.center.lng.toFixed(2)+","+currPosition.center.lat.toFixed(2)+" zoom:"+currPosition.zoom.toFixed(2)+" pitch:"+currPosition.pitch.toFixed(2)+" bearing:"+currPosition.bearing.toFixed(2);
+    //经过计算距离，对每个建筑setFeatureState，控制不同级别建筑的显示隐藏
+    changeBuildings(features);
+}
+
+//切换数据
+function changeBuildings(features){
+    //计算基准点的坐标，屏幕下方的中点对应的地理位置，后面还可以把基准点改为别的，例如地图中车和人的位置
+    var bounds=map.getBounds();
+    var basePoint=new Array(2);
+    //basePoint[0]=(bounds._sw.lng+bounds._ne.lng)/2;//这个位置会随着视线倾角的变化而发生偏移
+    basePoint[0]=map.getCenter().lng;
+    basePoint[1]=bounds._sw.lat;    
+    //圆心的位置也随着基准点的变化而移动
+    map.getSource('farCircle').setData(createGeoJSONCircle(basePoint, farDis).data);
+    map.getSource('closeCircle').setData(createGeoJSONCircle(basePoint, closeDis).data);
+    map.getSource('view-point').setData(createGeoJSONPoint(basePoint));
+    //遍历每个建筑，计算建筑到基准点的距离
+    for (var obj in buildingObj){
+        //只管三级，减少次数
+        if(buildingObj[obj].properties['lv']!=3){continue;}
+        //计算距离
+        var from = turf.point(basePoint);
+        var to = turf.point([buildingObj[obj].properties.POINT_X, buildingObj[obj].properties.POINT_Y]);
+        var distance = turf.distance(from, to);
+        //当前遍历到的三级建筑的id和高度
+        var id=buildingObj[obj].properties.OBJECTID;
+        var height=buildingObj[obj].properties.height;
+        //够远，显示三级，不显示子节点一二级
+        if (distance>=farDis){
+            //显示三级            
+            map.setFeatureState({source: 'Manhattan', id: id},{ height: height});
+            //不显示子节点一二级
+            var lod2Str=buildingObj[obj].properties.child;
+            var lod2Obj=lod2Str.split('-');
+            for(var obj2 in lod2Obj){
+                //不显示二级
+                var id2=buildingObj[lod2Obj[obj2]].properties.OBJECTID;
+                map.setFeatureState({source: 'Manhattan', id: id2},{ height: 0});
+                var lod3Str=buildingObj[lod2Obj[obj2]].properties.child;
+                var lod3Obj=lod3Str.split('-');
+                for(var obj3 in lod3Obj){
+                    //不显示一级
+                    var id3=buildingObj[lod3Obj[obj3]].properties.OBJECTID;
+                    map.setFeatureState({source: 'Manhattan', id: id3},{ height: 0});
+                }
+            }
+        }
+        //不够远不显示三级，显示二级或一级
+        else if(distance<farDis){
+            map.setFeatureState({source: 'Manhattan', id: id},{ height: 0});
+            //如果距离符合二级，显示二级，不显示对应一级
+            if(distance>=closeDis){
+                var lod2Str=buildingObj[obj].properties.child;
+                var lod2Obj=lod2Str.split('-');
+                for(var obj2 in lod2Obj){
+                    //显示二级
+                    var id2=buildingObj[lod2Obj[obj2]].properties.OBJECTID;
+                    var height2=buildingObj[lod2Obj[obj2]].properties.height;
+                    map.setFeatureState({source: 'Manhattan', id: id2},{ height: height2});
+                    var lod3Str=buildingObj[lod2Obj[obj2]].properties.child;
+                    var lod3Obj=lod3Str.split('-');
+                    for(var obj3 in lod3Obj){
+                        //不显示一级
+                        var id3=buildingObj[lod3Obj[obj3]].properties.OBJECTID;
+                        map.setFeatureState({source: 'Manhattan', id: id3},{ height: 0});
+                    }
+                }
+            }
+            //如果距离太近，不显示二级，显示对应一级
+            else {
+                var lod2Str=buildingObj[obj].properties.child;
+                var lod2Obj=lod2Str.split('-');
+                for(var obj2 in lod2Obj){
+                    //不显示二级
+                    var id2=buildingObj[lod2Obj[obj2]].properties.OBJECTID;
+                    map.setFeatureState({source: 'Manhattan', id: id2},{ height: 0});
+                    var lod3Str=buildingObj[lod2Obj[obj2]].properties.child;
+                    var lod3Obj=lod3Str.split('-');
+                    for(var obj3 in lod3Obj){
+                        //显示一级
+                        var id3=buildingObj[lod3Obj[obj3]].properties.OBJECTID;
+                        var height3=buildingObj[lod3Obj[obj3]].properties.height;
+                        map.setFeatureState({source: 'Manhattan', id: id3},{ height: height3});
+                    }
+                }
+            }
+        }
+    }    
+}
+
+// Because features come from tiled vector data, feature geometries may be split
+// or duplicated across tile boundaries and, as a result, features may appear
+// multiple times in query results.
+function getUniqueFeatures(array, comparatorProperty) {
+    var existingFeatureKeys = {};
+    var uniqueFeatures = array.filter(function(el) {
+        if (existingFeatureKeys[el.properties[comparatorProperty]]) {
+            return false;
+        } else {
+            existingFeatureKeys[el.properties[comparatorProperty]] = true;
+            return true;
+        }
+    });
+    return uniqueFeatures;
+}
+
+function createGeoJSONPoint(center) {
+    return {
+        "type": "Point",
+        "coordinates": center
+    };
+}
+
+function drawCircle(id,center,radius,color){
+    map.addSource(id, createGeoJSONCircle(center, radius));
+    map.addLayer({
+        "id": id,
+        "type": "line",
+        "source": id,
+        "layout": {},
+        "paint": {
+            "line-color": color,
+            "line-opacity": 1
+        }
+    });
+}
+
+var createGeoJSONCircle = function(center, radiusInKm, points) {
+    if(!points) points = 64;
+
+    var coords = {
+        latitude: center[1],
+        longitude: center[0]
+    };
+
+    var km = radiusInKm;
+
+    var ret = [];
+    var distanceX = km/(111.320*Math.cos(coords.latitude*Math.PI/180));
+    var distanceY = km/110.574;
+
+    var theta, x, y;
+    for(var i=0; i<points; i++) {
+        theta = (i/points)*(2*Math.PI);
+        x = distanceX*Math.cos(theta);
+        y = distanceY*Math.sin(theta);
+
+        ret.push([coords.longitude+x, coords.latitude+y]);
+    }
+    ret.push(ret[0]);
+
+    return {
+        "type": "geojson",
+        "data": {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [ret]
+                }
+            }]
+        }
+    };
+};
+
+</script>
+
+</body>
+</html>
