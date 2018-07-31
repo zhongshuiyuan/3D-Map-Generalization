@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset='utf-8' />
-    <title>LOD based on distance</title>
+    <title>LOD along the way</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
@@ -53,10 +53,10 @@ var oldPosition={
 };
 
 var file="LOD_simplify_merge_child_id.geojson";
-var features;//所有建筑
 var buildingObj={};//存放所有建筑，key是id方便访问
 var farDis=3;//两个圆，常量，km
 var closeDis=2;
+var viewPoint;
 
 //初始化，添加建筑、两个圆、视点等
 map.on('load', function () {
@@ -87,23 +87,17 @@ map.on('load', function () {
         //"filter": ["all",["==", "lv", 3]]
     });
     
-    //计算视点的坐标
-    var bounds=map.getBounds();
-    var basePoint=new Array(2);
-    //basePoint[0]=(bounds._sw.lng+bounds._ne.lng)/2;//这个歪了
-    basePoint[0]=map.getCenter().lng;
-    basePoint[1]=bounds._sw.lat;
-    
+    viewPoint=computeViewPoint();
     //画两个圆，表示距离远近
-    drawCircle("farCircle",basePoint,farDis,"red");
-    drawCircle("closeCircle",basePoint,closeDis,"blue");
+    drawCircle("farCircle",viewPoint,farDis,"red");
+    drawCircle("closeCircle",viewPoint,closeDis,"blue");
     
     // 添加一个相机的标志，表示视点
     map.addSource('view-point', {
         "type": "geojson",
         "data": {
             "type": "Point",
-            "coordinates": basePoint
+            "coordinates": viewPoint
         }
     });    
     map.addLayer({
@@ -113,17 +107,44 @@ map.on('load', function () {
         "layout": {
             "icon-image": "attraction-15",
             "icon-rotation-alignment": "map",
-            "icon-offset":[0,-10]
+            // "icon-offset":[0,-10]
         }
     });
+    //理解成当前方向 而不是当前道路 这样更容易实现
+    // //添加道路图层，可以不显示，分析当前道路用
+    // map.addSource('turboLine',{
+    // 	"type": "geojson",
+    //     "data": "turboLine.geojson"
+    // });
+    // map.addLayer({
+    // 	"id":"turboLine",
+    // 	"type":"line",
+    // 	"source":"turboLine",
+    //     "paint": {
+    //         "line-color": "#000",
+    //         "line-width": 1,
+    //         "line-opacity" :0.3
+    //     }
+    // });
 });
+
+//计算视点的坐标
+function computeViewPoint(){
+	//把屏幕下方(稍微偏上)中点转化为地理坐标
+	var mapSize=map._containerDimensions();
+    var screenX=mapSize[0]/2;
+    var screenY=mapSize[1]-10;
+    var geoCoordinates=map.unproject([screenX,screenY]);
+    var arrCoordinates=[geoCoordinates.lng,geoCoordinates.lat];
+    return arrCoordinates;
+}
 
 //建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
 map.on("sourcedata",function(e){
     if (e.source.data===file&&e.sourceDataType!=="metadata"&&map.isFirst===undefined){
         //注意：这里只能获取viewport范围内的要素，一开始的zoom要够大
         map.isFirst=true;//if里面的步骤只执行一次 还有别的办法吧，这种不好
-        features=map.querySourceFeatures('Manhattan');//注意：是source的id，不是Layer的
+        var features=map.querySourceFeatures('Manhattan');//注意：是source的id，不是Layer的
         if (features) {
             var uniqueFeatures = getUniqueFeatures(features, "OBJECTID");
             //根据id，给每个要素设置一个高度，真实高度或0
@@ -131,14 +152,14 @@ map.on("sourcedata",function(e){
                 var height=uniqueFeatures[i].properties.height;
                 var id=uniqueFeatures[i].properties.OBJECTID;
                 map.setFeatureState({source: 'Manhattan', id: id},{ height: height});
-                //把所有建筑存入buildingObj里
+                //把所有建筑存入buildingObj里 后面就是对他循环
                 key=uniqueFeatures[i].properties.id;
                 buildingObj[key]=uniqueFeatures[i];
             }
         }
         //一开始先用properties设置高度，setFeatureState完了之后再改用feature-state
         map.setPaintProperty("Manhattan-extrusion","fill-extrusion-height",["feature-state", "height"]);//这个可能还会触发一次sourcedata事件
-        changeBuildings(features);
+        changeBuildings();
     }    
 });
 
@@ -167,27 +188,22 @@ function changeInfo(){
     var pPosition=document.getElementById("position");
     pPosition.innerText="center:"+currPosition.center.lng.toFixed(2)+","+currPosition.center.lat.toFixed(2)+" zoom:"+currPosition.zoom.toFixed(2)+" pitch:"+currPosition.pitch.toFixed(2)+" bearing:"+currPosition.bearing.toFixed(2);
     //经过计算距离，对每个建筑setFeatureState，控制不同级别建筑的显示隐藏
-    changeBuildings(features);
+    changeBuildings();
 }
 
 //切换数据
-function changeBuildings(features){
-    //计算基准点的坐标，屏幕下方的中点对应的地理位置，后面还可以把基准点改为别的，例如地图中车和人的位置
-    var bounds=map.getBounds();
-    var basePoint=new Array(2);
-    //basePoint[0]=(bounds._sw.lng+bounds._ne.lng)/2;//这个位置会随着视线倾角的变化而发生偏移
-    basePoint[0]=map.getCenter().lng;
-    basePoint[1]=bounds._sw.lat;    
+function changeBuildings(){
+    viewPoint=computeViewPoint();    
     //圆心的位置也随着基准点的变化而移动
-    map.getSource('farCircle').setData(createGeoJSONCircle(basePoint, farDis).data);
-    map.getSource('closeCircle').setData(createGeoJSONCircle(basePoint, closeDis).data);
-    map.getSource('view-point').setData(createGeoJSONPoint(basePoint));
+    map.getSource('farCircle').setData(createGeoJSONCircle(viewPoint, farDis).data);
+    map.getSource('closeCircle').setData(createGeoJSONCircle(viewPoint, closeDis).data);
+    map.getSource('view-point').setData(createGeoJSONPoint(viewPoint));
     //遍历每个建筑，计算建筑到基准点的距离
     for (var obj in buildingObj){
         //只管三级，减少次数
         if(buildingObj[obj].properties['lv']!=3){continue;}
         //计算距离
-        var from = turf.point(basePoint);
+        var from = turf.point(viewPoint);
         var to = turf.point([buildingObj[obj].properties.POINT_X, buildingObj[obj].properties.POINT_Y]);
         var distance = turf.distance(from, to);
         //当前遍历到的三级建筑的id和高度
@@ -331,8 +347,6 @@ var createGeoJSONCircle = function(center, radiusInKm, points) {
         }
     };
 };
-
 </script>
-
 </body>
 </html>
