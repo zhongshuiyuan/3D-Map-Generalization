@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset='utf-8' />
-    <title>LOD</title>
+    <title>LOD based on distance</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
@@ -55,8 +55,8 @@ var oldPosition={
 
 var file="LOD_simplify_merge_child_id.geojson";
 var buildingObj={};//存放所有建筑，key是id方便访问
-var farDis=1;//两个圆，常量，km
-var closeDis=0.5;
+var farDis=3;//两个圆，常量，km
+var closeDis=2;
 var viewPoint;
 
 //初始化，添加建筑、两个圆、视点等
@@ -90,8 +90,8 @@ map.on('load', function () {
     
     viewPoint=computeViewPoint();
     //画两个圆，表示距离远近
-    // drawCircle("farCircle",viewPoint,farDis,"red");
-    // drawCircle("closeCircle",viewPoint,closeDis,"blue");
+    drawCircle("farCircle",viewPoint,farDis,"red");
+    drawCircle("closeCircle",viewPoint,closeDis,"blue");
     
     // 添加一个相机的标志，表示视点
     map.addSource('view-point', {
@@ -169,8 +169,8 @@ function changeInfo(){
 function changeBuildings(){
     viewPoint=computeViewPoint();    
     //圆心的位置也随着基准点的变化而移动
-    // map.getSource('farCircle').setData(createGeoJSONCircle(viewPoint, farDis).data);
-    // map.getSource('closeCircle').setData(createGeoJSONCircle(viewPoint, closeDis).data);
+    map.getSource('farCircle').setData(createGeoJSONCircle(viewPoint, farDis).data);
+    map.getSource('closeCircle').setData(createGeoJSONCircle(viewPoint, closeDis).data);
     map.getSource('view-point').setData(createGeoJSONPoint(viewPoint));
     //遍历每个建筑，计算建筑到基准点的距离
     for (var obj in buildingObj){
@@ -247,28 +247,28 @@ function changeBuildings(){
 //理解成当前方向 而不是当前道路 这样更容易实现
 function computeDistance(building){
 	//计算建筑到视点的距离
-	// var from = turf.point(viewPoint);
-	// var to = turf.point([building.properties.POINT_X, building.properties.POINT_Y]);
-	// var distance = turf.distance(from, to);
-	// return distance;
+	var from = turf.point(viewPoint);
+	var to = turf.point([building.properties.POINT_X, building.properties.POINT_Y]);
+	var distance = turf.distance(from, to);
+	return distance;
 	
 	//计算建筑到视点中心线的距离
 	//得到视点中心线
-	var mapSize=map._containerDimensions();
-    var screenCenterX=mapSize[0]/2;
-    var screenCenterY=mapSize[1]/2;
-    var geoCenter=map.unproject([screenCenterX,screenCenterY]);
-    //首先找到建筑到中心线最近的点，再计算两点距离
-    var viewCenterLine=turf.lineString([
-		viewPoint,
-        [geoCenter.lng,geoCenter.lat]
-	]);
-	var buildingPoint=[building.properties.POINT_X, building.properties.POINT_Y];
-	var nearestPoint = turf.nearestPointOnLine(viewCenterLine, buildingPoint).geometry.coordinates;
-    var from = turf.point(nearestPoint);
-    var to = turf.point(buildingPoint);
-    var distance = turf.distance(from, to);
-    return distance;
+	// var mapSize=map._containerDimensions();
+ //    var screenCenterX=mapSize[0]/2;
+ //    var screenCenterY=mapSize[1]/2;
+ //    var geoCenter=map.unproject([screenCenterX,screenCenterY]);
+ //    //首先找到建筑到中心线最近的点，再计算两点距离
+ //    var viewCenterLine=turf.lineString([
+	// 	viewPoint,
+ //        [geoCenter.lng,geoCenter.lat]
+	// ]);
+	// var buildingPoint=[building.properties.POINT_X, building.properties.POINT_Y];
+	// var nearestPoint = turf.nearestPointOnLine(viewCenterLine, buildingPoint).geometry.coordinates;
+ //    var from = turf.point(nearestPoint);
+ //    var to = turf.point(buildingPoint);
+ //    var distance = turf.distance(from, to);
+ //    return distance;
 
     //计算建筑到当前道路的距离
     // //添加道路图层，可以不显示，分析当前道路用 加上判断是否已添加 能否直接用mapbox的道路，getlayer
