@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset='utf-8' />
-    <title>LOD</title>
+    <title>多尺度展示</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
@@ -15,7 +15,6 @@
             background: #fff;
             padding: 10px;
             font-family: 'Open Sans', sans-serif;
-            /*display: none;*/
         }
         #loadingMessage {
             position: absolute;
@@ -45,7 +44,6 @@ var map = new mapboxgl.Map({
     zoom: 13.5,
     pitch: 50,
     bearing:0,
-    hash:false,
     pitchWithRotate:false//锁定pitch，近处强制显示3D
 });
 
@@ -58,14 +56,14 @@ var oldPosition={
 };
 
 var file="LOD_simplify_merge_child_id.geojson";
-var buildingObj={};//存放所有建筑，key是id方便访问
-var farDis=1;//两个圆，常量，km
+var buildingObj={};//存放所有建筑，key是id，方便访问
+var farDis=1;//划分详细程度的距离，常量，km
 var closeDis=0.5;
-var viewPoint;
+var viewPoint;//三种选项对应的三种缓冲区中心
 var viewCenterLine;
 var viewCurrentRoad;
 
-//初始化，添加建筑、两个圆、视点等
+//初始化，添加建筑、中心点、缓冲区
 map.on('load', function () {
 	//添加建筑
     map.addSource('Manhattan',{
@@ -98,13 +96,14 @@ map.on('load', function () {
 
 //建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
 map.on("sourcedata",function(e){
-    if (e.source.data===file&&e.sourceDataType!=="metadata"&&map.isFirst===undefined){
+    var isFirst=true;
+    if (e.source.data===file&&e.sourceDataType!=="metadata"&&isFirst){
         //注意：这里只能获取viewport范围内的要素，一开始的zoom要够大
-        map.isFirst=true;//if里面的步骤只执行一次 还有别的办法吧，这种不好
+        isFirst=false;//if里面的步骤只执行一次
         var features=map.querySourceFeatures('Manhattan');//注意：是source的id，不是Layer的
         if (features) {
             var uniqueFeatures = getUniqueFeatures(features, "OBJECTID");
-            //根据id，给每个要素设置一个高度，真实高度或0
+            //根据id，给每个要素设置一个高度，一开始设成真实高度，后面根据需要设成0来隐藏
             for (var i in uniqueFeatures){
                 var height=uniqueFeatures[i].properties.height;
                 var id=uniqueFeatures[i].properties.OBJECTID;
@@ -114,7 +113,7 @@ map.on("sourcedata",function(e){
                 buildingObj[key]=uniqueFeatures[i];
             }
         }
-        //一开始先用properties设置高度，setFeatureState完了之后再改用feature-state
+        //一开始先用properties设置高度，setFeatureState完了之后就可改用feature-state
         map.setPaintProperty("Manhattan-extrusion","fill-extrusion-height",["feature-state", "height"]);//这个可能还会触发一次sourcedata事件
         changeBuildings();
     }    
@@ -141,14 +140,18 @@ function changeInfo(){
     var unchanged = JSON.stringify(currPosition) === JSON.stringify(oldPosition);
     if (unchanged) return;//地图没改变则返回，改动了继续执行后面的    
     oldPosition=currPosition;
-    //显示当前相机位置
+    //菜单中显示当前相机位置
     var pPosition=document.getElementById("position");
-    pPosition.innerText="center:"+currPosition.center.lng.toFixed(2)+","+currPosition.center.lat.toFixed(2)+" zoom:"+currPosition.zoom.toFixed(2)+" pitch:"+currPosition.pitch.toFixed(2)+" bearing:"+currPosition.bearing.toFixed(2);
-    //经过计算距离，对每个建筑setFeatureState，控制不同级别建筑的显示隐藏
+    pPosition.innerText=
+    "center:"+currPosition.center.lng.toFixed(2)+","+currPosition.center.lat.toFixed(2)+
+    " zoom:"+currPosition.zoom.toFixed(2)+
+    " pitch:"+currPosition.pitch.toFixed(2)+
+    " bearing:"+currPosition.bearing.toFixed(2);
+    
     changeBuildings();
 }
 
-//切换数据
+//切换数据 经过计算距离，对每个建筑setFeatureState，控制不同级别建筑的显示隐藏
 function changeBuildings(){
 	drawViewPointAndScope();  
     //遍历每个建筑，计算建筑到基准点的距离
@@ -222,13 +225,11 @@ function changeBuildings(){
     }    
 }
 
+//切换不同的控制细节层次的方法
 var frmLodMethod=document.getElementById("lodMethod");
 var inputsLodMethod=frmLodMethod.getElementsByTagName("input");
-function switchLodMethod(){
-    changeBuildings();
-}
 for (var i=0;i<inputsLodMethod.length;i++){
-    inputsLodMethod[i].onclick=switchLodMethod;
+    inputsLodMethod[i].onclick=changeBuildings;
 }
 function getLodMethod(){
     var lodMethod;
@@ -241,16 +242,16 @@ function getLodMethod(){
     return lodMethod;
 }
 
-//计算建筑到视点的距离(可以改成其他距离，如到视点中心线距离、到当前道路距离)，根据这个来确定使用的数据的详细程度
-//理解成当前方向 而不是当前道路 这样更容易实现
-//三种距离灵活切换 也可以不计算距离，跟画好的缓冲区叠加
+//计算建筑到视点的距离，或到视点中心线的距离，或到当前道路距离 这是确定使用的数据的详细程度的依据
+//也可以不计算距离，跟画好的缓冲区做叠置分析
 function computeDistance(building){
+    var buildingPoint=[building.properties.POINT_X, building.properties.POINT_Y];
+    var to = turf.point(buildingPoint);
     var lodMethod=getLodMethod();
     switch (lodMethod){
         case "distance":
             //计算建筑到视点的距离
             var from = turf.point(viewPoint);
-            var to = turf.point([building.properties.POINT_X, building.properties.POINT_Y]);
             var distance = turf.distance(from, to);
             break;
         case "way":
@@ -258,7 +259,6 @@ function computeDistance(building){
             var buildingPoint=[building.properties.POINT_X, building.properties.POINT_Y];
             var nearestPoint = turf.nearestPointOnLine(viewCenterLine, buildingPoint).geometry.coordinates;
             var from = turf.point(nearestPoint);
-            var to = turf.point(buildingPoint);
             var distance = turf.distance(from, to);
             break;
         case "road":
@@ -270,7 +270,7 @@ function computeDistance(building){
     return distance;    
 }
 
-//画当前视点，以及划分细节层次的线
+//画当前视点，以及划分细节层次的线，即缓冲区的边界线
 function drawViewPointAndScope(){
 	// 画一个相机的标志，表示视点
     viewPoint=computeViewPoint();
@@ -290,23 +290,22 @@ function drawViewPointAndScope(){
 	        "layout": {
 	            "icon-image": "attraction-15",
 	            "icon-rotation-alignment": "map",
-	            "icon-offset":[0,-10]
+	            "icon-offset":[0,-10]//实际显示的时候往上偏移一点否则看不到
 	        }
 	    });
     }
-    //更新视点   
+    //相机位置改变时更新视点   
     map.getSource('view-point').setData(createGeoJSONPoint(viewPoint));   
 	
+    //画划分细节层次的线，不同的方法形状不同
     var lodMethod=getLodMethod();
     switch (lodMethod){
         case "distance":
-            //画划分细节层次的线
             //根据距离显示不同详细程度 画圆形的缓冲区
             drawAndUpdateScope(turf.point(viewPoint));
             break;
         case "way":
-            //沿当前方向详细
-            //得到视点中心线
+            //沿当前方向详细程度高 先得到视点中心线，再做缓冲区
             var mapSize=map._containerDimensions();
             var screenCenterX=mapSize[0]/2;
             var screenCenterY=mapSize[1]/2;
@@ -322,29 +321,26 @@ function drawViewPointAndScope(){
     }    
 }
 
+//画缓冲区
 function drawAndUpdateScope(geometry){
     //经测试发现turf的缓冲区半径有bug，放大1.32倍才准确
     //修复bug，实时计算应该缩放多少倍
     var isFirst=true;
     if (isFirst){
         var buffered=turf.buffer(turf.point(viewPoint), farDis); 
-        var points=[viewPoint,buffered.geometry.coordinates[0][0]];
+        var points=[viewPoint,buffered.geometry.coordinates[0][0]];//有些库做出来的缓冲区是椭圆的，turf没问题，不用每个点都测
         var linestring=turf.lineString(points);
         var realRadius=turf.lineDistance(linestring);
         var multiplier=farDis/realRadius;//缩放倍数
         isFirst=false;
     }    
-    //有些库做出来的缓冲区是椭圆的，turf没问题   
-    // for (var i in buffered.geometry.coordinates[0]){
-    //     var points=[center.geometry.coordinates,buffered.geometry.coordinates[0][0]];
-    //     var linestring=turf.lineString(points);
-    //     console.log(turf.lineDistance(linestring).toLocaleString() + 'km');
-    // }
+
     // //首次运行画两个范围线
     if (map.getSource("farBuffer")===undefined){
         drawBuffer("farBuffer",geometry,farDis*multiplier,"red");
     	drawBuffer("closeBuffer",geometry,closeDis*multiplier,"blue");
     }
+
 	//更新范围线，中心的位置随着视点的变化而移动    
     var farBuffered = turf.buffer(geometry, farDis*multiplier);
     var closeBuffered=turf.buffer(geometry, closeDis*multiplier);
@@ -354,13 +350,6 @@ function drawAndUpdateScope(geometry){
 
 function drawBuffer(id,center,radius,color){
     var buffered=turf.buffer(center, radius);
-    //经测试发现turf的缓冲区半径有bug，放大1.32倍才准确
-    // for (var i in buffered.geometry.coordinates[0]){
-    //     var points=[center.geometry.coordinates,buffered.geometry.coordinates[0][0]];
-    //     var linestring=turf.lineString(points);
-    //     console.log(turf.lineDistance(linestring).toLocaleString() + 'km');
-    // }
-    
     map.addSource(id, {
 		"type":"geojson",
 		"data":buffered
@@ -410,59 +399,6 @@ function createGeoJSONPoint(center) {
         "coordinates": center
     };
 }
-
-function drawCircle(id,center,radius,color){
-    map.addSource(id, createGeoJSONCircle(center, radius));
-    map.addLayer({
-        "id": id,
-        "type": "line",
-        "source": id,
-        "layout": {},
-        "paint": {
-            "line-color": color,
-            "line-opacity": 1
-        }
-    });
-}
-
-var createGeoJSONCircle = function(center, radiusInKm, points) {
-    if(!points) points = 64;
-
-    var coords = {
-        latitude: center[1],
-        longitude: center[0]
-    };
-
-    var km = radiusInKm;
-
-    var ret = [];
-    var distanceX = km/(111.320*Math.cos(coords.latitude*Math.PI/180));
-    var distanceY = km/110.574;
-
-    var theta, x, y;
-    for(var i=0; i<points; i++) {
-        theta = (i/points)*(2*Math.PI);
-        x = distanceX*Math.cos(theta);
-        y = distanceY*Math.sin(theta);
-
-        ret.push([coords.longitude+x, coords.latitude+y]);
-    }
-    ret.push(ret[0]);
-
-    return {
-        "type": "geojson",
-        "data": {
-            "type": "FeatureCollection",
-            "features": [{
-                "type": "Feature",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [ret]
-                }
-            }]
-        }
-    };
-};
 </script>
 </body>
 </html>
