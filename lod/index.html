@@ -58,14 +58,16 @@ var buildingObj={};//存放所有建筑，key是id方便访问
 var farDis=1;//两个圆，常量，km
 var closeDis=0.5;
 var viewPoint;
+var viewCenterLine;
+var viewCurrentRoad;
 
 //初始化，添加建筑、两个圆、视点等
 map.on('load', function () {
+	//添加建筑
     map.addSource('Manhattan',{
         'type': 'geojson',
         'data': file
     });
-
     map.addLayer({
         'id': 'Manhattan-extrusion',
         'type': 'fill-extrusion',
@@ -87,30 +89,7 @@ map.on('load', function () {
         },
         //"filter": ["all",["==", "lv", 3]]
     });
-    
-    viewPoint=computeViewPoint();
-    //画两个圆，表示距离远近
-    // drawCircle("farCircle",viewPoint,farDis,"red");
-    // drawCircle("closeCircle",viewPoint,closeDis,"blue");
-    
-    // 添加一个相机的标志，表示视点
-    map.addSource('view-point', {
-        "type": "geojson",
-        "data": {
-            "type": "Point",
-            "coordinates": viewPoint
-        }
-    });    
-    map.addLayer({
-        "id": "view-point",
-        "source": "view-point",
-        "type": "symbol",
-        "layout": {
-            "icon-image": "attraction-15",
-            "icon-rotation-alignment": "map",
-            "icon-offset":[0,-10]
-        }
-    });
+    drawViewPointAndScope();
 });
 
 //建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
@@ -167,11 +146,7 @@ function changeInfo(){
 
 //切换数据
 function changeBuildings(){
-    viewPoint=computeViewPoint();    
-    //圆心的位置也随着基准点的变化而移动
-    // map.getSource('farCircle').setData(createGeoJSONCircle(viewPoint, farDis).data);
-    // map.getSource('closeCircle').setData(createGeoJSONCircle(viewPoint, closeDis).data);
-    map.getSource('view-point').setData(createGeoJSONPoint(viewPoint));
+	drawViewPointAndScope();  
     //遍历每个建筑，计算建筑到基准点的距离
     for (var obj in buildingObj){
         //只管三级，减少次数
@@ -245,24 +220,15 @@ function changeBuildings(){
 
 //计算建筑到视点的距离(可以改成其他距离，如到视点中心线距离、到当前道路距离)，根据这个来确定使用的数据的详细程度
 //理解成当前方向 而不是当前道路 这样更容易实现
+//三种距离灵活切换 也可以不计算距离，跟画好的缓冲区叠加
 function computeDistance(building){
-	//计算建筑到视点的距离
+	// //计算建筑到视点的距离
 	// var from = turf.point(viewPoint);
 	// var to = turf.point([building.properties.POINT_X, building.properties.POINT_Y]);
 	// var distance = turf.distance(from, to);
 	// return distance;
 	
-	//计算建筑到视点中心线的距离
-	//得到视点中心线
-	var mapSize=map._containerDimensions();
-    var screenCenterX=mapSize[0]/2;
-    var screenCenterY=mapSize[1]/2;
-    var geoCenter=map.unproject([screenCenterX,screenCenterY]);
-    //首先找到建筑到中心线最近的点，再计算两点距离
-    var viewCenterLine=turf.lineString([
-		viewPoint,
-        [geoCenter.lng,geoCenter.lat]
-	]);
+	//计算建筑到视点中心线的距离。首先找到建筑到中心线最近的点，再计算两点距离
 	var buildingPoint=[building.properties.POINT_X, building.properties.POINT_Y];
 	var nearestPoint = turf.nearestPointOnLine(viewCenterLine, buildingPoint).geometry.coordinates;
     var from = turf.point(nearestPoint);
@@ -270,22 +236,94 @@ function computeDistance(building){
     var distance = turf.distance(from, to);
     return distance;
 
-    //计算建筑到当前道路的距离
-    // //添加道路图层，可以不显示，分析当前道路用 加上判断是否已添加 能否直接用mapbox的道路，getlayer
-    // map.addSource('turboLine',{
-    // 	"type": "geojson",
-    //     "data": "turboLine.geojson"
-    // });
-    // map.addLayer({
-    // 	"id":"turboLine",
-    // 	"type":"line",
-    // 	"source":"turboLine",
-    //     "paint": {
-    //         "line-color": "#000",
-    //         "line-width": 1,
-    //         "line-opacity" :0.3
-    //     }
-    // });
+    //计算建筑到当前道路的距离    
+}
+
+//画当前视点，以及划分细节层次的线
+function drawViewPointAndScope(){
+	// 添加一个相机的标志，表示视点
+    viewPoint=computeViewPoint();
+    //首次运行要添加视点这个图层
+    if (map.getSource('view-point')===undefined){
+    	map.addSource('view-point', {
+	        "type": "geojson",
+	        "data": {
+	            "type": "Point",
+	            "coordinates": []
+	        }
+	    });    
+	    map.addLayer({
+	        "id": "view-point",
+	        "source": "view-point",
+	        "type": "symbol",
+	        "layout": {
+	            "icon-image": "attraction-15",
+	            "icon-rotation-alignment": "map",
+	            "icon-offset":[0,-10]
+	        }
+	    });
+    }
+    //更新视点   
+    map.getSource('view-point').setData(createGeoJSONPoint(viewPoint));   
+	
+    //根据距离显示不同详细程度
+    // //首次运行画两个圆
+    // if (map.getSource("farCircle")===undefined){
+    // 	drawCircle("farCircle",viewPoint,farDis,"red");
+    // 	drawCircle("closeCircle",viewPoint,closeDis,"blue");        
+    // }
+	// //更新圆，圆心的位置也随着基准点的变化而移动
+    // map.getSource('farCircle').setData(createGeoJSONCircle(viewPoint, farDis).data);
+    // map.getSource('closeCircle').setData(createGeoJSONCircle(viewPoint, closeDis).data);
+    // if (map.getSource("farBuffer")===undefined){
+    //     drawBuffer("farBuffer",turf.point(viewPoint),farDis*1.32,"red");
+    // 	drawBuffer("closeBuffer",turf.point(viewPoint),closeDis*1.32,"blue");
+    // }
+    // var farBuffered = turf.buffer(turf.point(viewPoint), farDis*1.32);
+    // var closeBuffered=turf.buffer(turf.point(viewPoint), closeDis*1.32);
+    // map.getSource('farBuffer').setData(farBuffered);
+    // map.getSource('closeBuffer').setData(closeBuffered);
+
+    //沿当前方向详细
+    //得到视点中心线
+	var mapSize=map._containerDimensions();
+    var screenCenterX=mapSize[0]/2;
+    var screenCenterY=mapSize[1]/2;
+    var geoCenterObj=map.unproject([screenCenterX,screenCenterY]);
+    var geoCenterArr=[geoCenterObj.lng,geoCenterObj.lat];    
+    viewCenterLine=turf.lineString([viewPoint,geoCenterArr]);
+    //首次运行画两个缓冲区
+    if (map.getSource("farBuffer")===undefined){
+    	drawBuffer("farBuffer",viewCenterLine,farDis*1.32,"red");
+    	drawBuffer("closeBuffer",viewCenterLine,closeDis*1.32,"blue");
+    }
+    //更新缓冲区
+    var farBuffered = turf.buffer(viewCenterLine, farDis*1.32);
+    var closeBuffered=turf.buffer(viewCenterLine, closeDis*1.32);
+    map.getSource('farBuffer').setData(farBuffered);
+    map.getSource('closeBuffer').setData(closeBuffered);
+}
+
+function drawBuffer(id,center,radius,color){
+    var buffered=turf.buffer(center, radius);
+    //经测试发现turf的缓冲区半径有bug，放大1.32倍才准确
+    // var points=[center.geometry.coordinates,buffered.geometry.coordinates[0][0]];
+    // var linestring=turf.lineString(points);
+	// console.log(turf.lineDistance(linestring).toLocaleString() + 'km');
+    map.addSource(id, {
+		"type":"geojson",
+		"data":buffered
+	});
+    map.addLayer({
+        "id": id,
+        "type": "line",
+        "source": id,
+        "paint": {
+            "line-color": color,
+            "line-opacity": 1,
+            "line-width": 1
+        }
+    });
 }
 
 //计算视点的坐标
@@ -294,8 +332,8 @@ function computeViewPoint(){
 	var mapSize=map._containerDimensions();
     var screenX=mapSize[0]/2;
     var screenY=mapSize[1];
-    var geoCoordinates=map.unproject([screenX,screenY]);
-    var arrCoordinates=[geoCoordinates.lng,geoCoordinates.lat];
+    var objCoordinates=map.unproject([screenX,screenY]);
+    var arrCoordinates=[objCoordinates.lng,objCoordinates.lat];
     return arrCoordinates;
 }
 
