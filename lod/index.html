@@ -6,7 +6,6 @@
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
-    <!-- <script src='https://api.mapbox.com/mapbox.js/plugins/turf/v2.0.2/turf.min.js'></script> -->
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@5/turf.min.js"></script>
     <style>
         body { margin:0; padding:0; }
@@ -30,6 +29,11 @@
 <div id='map'></div>
 <div id='menu'>
     <p id="position"></p>
+    <form id="lodMethod">
+    <input type="radio" name="lodMethod" value="distance" checked>根据距离&nbsp;
+    <input type="radio" name="lodMethod" value="way">当前方向&nbsp;
+    <input type="radio" name="lodMethod" value="road">当前道路
+    </form> 
 </div>
 <div id="loadingMessage">正在传输数据，请稍等...</div>
 <script>
@@ -218,30 +222,57 @@ function changeBuildings(){
     }    
 }
 
+var frmLodMethod=document.getElementById("lodMethod");
+var inputsLodMethod=frmLodMethod.getElementsByTagName("input");
+function switchLodMethod(){
+    changeBuildings();
+}
+for (var i=0;i<inputsLodMethod.length;i++){
+    inputsLodMethod[i].onclick=switchLodMethod;
+}
+function getLodMethod(){
+    var lodMethod;
+    for (var i=0;i<inputsLodMethod.length;i++){
+        if (inputsLodMethod[i].checked==true){
+            lodMethod=inputsLodMethod[i].value;
+            break;
+        }
+    }
+    return lodMethod;
+}
+
 //计算建筑到视点的距离(可以改成其他距离，如到视点中心线距离、到当前道路距离)，根据这个来确定使用的数据的详细程度
 //理解成当前方向 而不是当前道路 这样更容易实现
 //三种距离灵活切换 也可以不计算距离，跟画好的缓冲区叠加
 function computeDistance(building){
-	// //计算建筑到视点的距离
-	// var from = turf.point(viewPoint);
-	// var to = turf.point([building.properties.POINT_X, building.properties.POINT_Y]);
-	// var distance = turf.distance(from, to);
-	// return distance;
-	
-	//计算建筑到视点中心线的距离。首先找到建筑到中心线最近的点，再计算两点距离
-	var buildingPoint=[building.properties.POINT_X, building.properties.POINT_Y];
-	var nearestPoint = turf.nearestPointOnLine(viewCenterLine, buildingPoint).geometry.coordinates;
-    var from = turf.point(nearestPoint);
-    var to = turf.point(buildingPoint);
-    var distance = turf.distance(from, to);
-    return distance;
-
-    //计算建筑到当前道路的距离    
+    var lodMethod=getLodMethod();
+    switch (lodMethod){
+        case "distance":
+            //计算建筑到视点的距离
+            var from = turf.point(viewPoint);
+            var to = turf.point([building.properties.POINT_X, building.properties.POINT_Y]);
+            var distance = turf.distance(from, to);
+            break;
+        case "way":
+            //计算建筑到视点中心线的距离。首先找到建筑到中心线最近的点，再计算两点距离
+            var buildingPoint=[building.properties.POINT_X, building.properties.POINT_Y];
+            var nearestPoint = turf.nearestPointOnLine(viewCenterLine, buildingPoint).geometry.coordinates;
+            var from = turf.point(nearestPoint);
+            var to = turf.point(buildingPoint);
+            var distance = turf.distance(from, to);
+            break;
+        case "road":
+            //计算建筑到当前道路的距离
+            break;
+        default:
+            break;
+    }
+    return distance;    
 }
 
 //画当前视点，以及划分细节层次的线
 function drawViewPointAndScope(){
-	// 添加一个相机的标志，表示视点
+	// 画一个相机的标志，表示视点
     viewPoint=computeViewPoint();
     //首次运行要添加视点这个图层
     if (map.getSource('view-point')===undefined){
@@ -266,40 +297,57 @@ function drawViewPointAndScope(){
     //更新视点   
     map.getSource('view-point').setData(createGeoJSONPoint(viewPoint));   
 	
-    //根据距离显示不同详细程度
-    // //首次运行画两个圆
-    // if (map.getSource("farCircle")===undefined){
-    // 	drawCircle("farCircle",viewPoint,farDis,"red");
-    // 	drawCircle("closeCircle",viewPoint,closeDis,"blue");        
-    // }
-	// //更新圆，圆心的位置也随着基准点的变化而移动
-    // map.getSource('farCircle').setData(createGeoJSONCircle(viewPoint, farDis).data);
-    // map.getSource('closeCircle').setData(createGeoJSONCircle(viewPoint, closeDis).data);
-    // if (map.getSource("farBuffer")===undefined){
-    //     drawBuffer("farBuffer",turf.point(viewPoint),farDis*1.32,"red");
-    // 	drawBuffer("closeBuffer",turf.point(viewPoint),closeDis*1.32,"blue");
-    // }
-    // var farBuffered = turf.buffer(turf.point(viewPoint), farDis*1.32);
-    // var closeBuffered=turf.buffer(turf.point(viewPoint), closeDis*1.32);
-    // map.getSource('farBuffer').setData(farBuffered);
-    // map.getSource('closeBuffer').setData(closeBuffered);
+    var lodMethod=getLodMethod();
+    switch (lodMethod){
+        case "distance":
+            //画划分细节层次的线
+            //根据距离显示不同详细程度 画圆形的缓冲区
+            drawAndUpdateScope(turf.point(viewPoint));
+            break;
+        case "way":
+            //沿当前方向详细
+            //得到视点中心线
+            var mapSize=map._containerDimensions();
+            var screenCenterX=mapSize[0]/2;
+            var screenCenterY=mapSize[1]/2;
+            var geoCenterObj=map.unproject([screenCenterX,screenCenterY]);
+            var geoCenterArr=[geoCenterObj.lng,geoCenterObj.lat];    
+            viewCenterLine=turf.lineString([viewPoint,geoCenterArr]);
+            drawAndUpdateScope(viewCenterLine);
+            break;
+        case "road":
+            break;
+        default:
+            break;
+    }    
+}
 
-    //沿当前方向详细
-    //得到视点中心线
-	var mapSize=map._containerDimensions();
-    var screenCenterX=mapSize[0]/2;
-    var screenCenterY=mapSize[1]/2;
-    var geoCenterObj=map.unproject([screenCenterX,screenCenterY]);
-    var geoCenterArr=[geoCenterObj.lng,geoCenterObj.lat];    
-    viewCenterLine=turf.lineString([viewPoint,geoCenterArr]);
-    //首次运行画两个缓冲区
+function drawAndUpdateScope(geometry){
+    //经测试发现turf的缓冲区半径有bug，放大1.32倍才准确
+    //修复bug，实时计算应该缩放多少倍
+    var isFirst=true;
+    if (isFirst){
+        var buffered=turf.buffer(turf.point(viewPoint), farDis); 
+        var points=[viewPoint,buffered.geometry.coordinates[0][0]];
+        var linestring=turf.lineString(points);
+        var realRadius=turf.lineDistance(linestring);
+        var multiplier=farDis/realRadius;//缩放倍数
+        isFirst=false;
+    }    
+    //有些库做出来的缓冲区是椭圆的，turf没问题   
+    // for (var i in buffered.geometry.coordinates[0]){
+    //     var points=[center.geometry.coordinates,buffered.geometry.coordinates[0][0]];
+    //     var linestring=turf.lineString(points);
+    //     console.log(turf.lineDistance(linestring).toLocaleString() + 'km');
+    // }
+    // //首次运行画两个范围线
     if (map.getSource("farBuffer")===undefined){
-    	drawBuffer("farBuffer",viewCenterLine,farDis*1.32,"red");
-    	drawBuffer("closeBuffer",viewCenterLine,closeDis*1.32,"blue");
+        drawBuffer("farBuffer",geometry,farDis*multiplier,"red");
+    	drawBuffer("closeBuffer",geometry,closeDis*multiplier,"blue");
     }
-    //更新缓冲区
-    var farBuffered = turf.buffer(viewCenterLine, farDis*1.32);
-    var closeBuffered=turf.buffer(viewCenterLine, closeDis*1.32);
+	//更新范围线，中心的位置随着视点的变化而移动    
+    var farBuffered = turf.buffer(geometry, farDis*multiplier);
+    var closeBuffered=turf.buffer(geometry, closeDis*multiplier);
     map.getSource('farBuffer').setData(farBuffered);
     map.getSource('closeBuffer').setData(closeBuffered);
 }
@@ -307,9 +355,12 @@ function drawViewPointAndScope(){
 function drawBuffer(id,center,radius,color){
     var buffered=turf.buffer(center, radius);
     //经测试发现turf的缓冲区半径有bug，放大1.32倍才准确
-    // var points=[center.geometry.coordinates,buffered.geometry.coordinates[0][0]];
-    // var linestring=turf.lineString(points);
-	// console.log(turf.lineDistance(linestring).toLocaleString() + 'km');
+    // for (var i in buffered.geometry.coordinates[0]){
+    //     var points=[center.geometry.coordinates,buffered.geometry.coordinates[0][0]];
+    //     var linestring=turf.lineString(points);
+    //     console.log(turf.lineDistance(linestring).toLocaleString() + 'km');
+    // }
+    
     map.addSource(id, {
 		"type":"geojson",
 		"data":buffered
