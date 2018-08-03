@@ -56,7 +56,7 @@ mapboxgl.accessToken = 'pk.eyJ1IjoiYXJzbHh5IiwiYSI6ImNqZzRzemViajJ4MWUzM3Bjc3Z2M
 var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/basic-v9',
-    center: [121.48529,31.25316],
+    center: [121.42658554279558, 31.162356610593136],//南京118.79055594872085, 32.05376236060384//广州113.25871364943879, 23.128997163128673
     zoom: 13.8,
     pitch: 50,
     bearing: 0,
@@ -90,7 +90,7 @@ var labelLayerId="shanghai_L1";
 // });
 
 //切换底图的风格 展示轨迹线用暗的底图
-var layerList = document.getElementById('menu');
+var layerList = document.getElementById('baselayerControlPanel');
 var inputs = layerList.getElementsByTagName('input');
 function switchLayer(layer) {
     var layerId = layer.target.id;
@@ -98,6 +98,29 @@ function switchLayer(layer) {
 }
 for (var i = 0; i < inputs.length; i++) {
     inputs[i].onclick = switchLayer;
+}
+
+//切换不同的控制细节层次的方法
+var cityPanel=document.getElementById("cityControlPanel");
+var inputsCities=cityPanel.getElementsByTagName("input");
+for (var i=0;i<inputsCities.length;i++){
+    inputsCities[i].onclick=switchCity;
+}
+function switchCity(e) { 
+    var city = e.target.value;
+    switch (city) { 
+        case "Shanghai":
+            map.panTo([121.42658554279558, 31.162356610593136]);
+            break;
+        case "Nanjing":
+            map.panTo([118.79055594872085, 32.05376236060384]);
+            break;
+        case "Guangzhou":
+            map.panTo([113.25871364943879, 23.128997163128673]);
+            break;
+        default:
+            break;    
+    }
 }
 
 //换数据 每个级别的数据都添加进去

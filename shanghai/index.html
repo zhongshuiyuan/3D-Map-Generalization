@@ -64,7 +64,17 @@
 <div id='map'></div>
 
 <div id='menu' class="panel">
-    <input id='basic' type='radio' name='rtoggle' value='basic'>
+    <p>说明：L1~L9图层分别在zoom=15.5、15.0、...、12.0</p>
+    <p id="xixi">zoom:xxx;     layer:xxx;</p>
+    <button id="cityControl">城市</button>
+    <button id="baselayerControl">底图</button>
+    <button id="noiseControl">噪音</button>
+    <button id="lightControl">光照</button>
+    <!-- <button id="cloudControl">云雾</button> -->
+</div>
+
+<div id="baselayerControlPanel" class="controlPanel panel">
+	<input id='basic' type='radio' name='rtoggle' value='basic'>
     <label for='basic'>basic</label>
     <input id='streets' type='radio' name='rtoggle' value='streets'>
     <label for='streets'>streets</label>
@@ -75,12 +85,13 @@
     <input id='dark' type='radio' name='rtoggle' value='dark'>
     <label for='dark'>dark</label>
     <input id='satellite' type='radio' name='rtoggle' value='satellite'>
-    <label for='satellite'>satellite</label>    
-    <p>说明：L1~L9图层分别在zoom=15.5、15.0、...、12.0</p>
-    <p id="xixi">zoom:xxx;     layer:xxx;</p>
-    <button id="noiseControl">噪音</button>
-    <button id="lightControl">光照</button>
-    <!-- <button id="cloudControl">云雾</button> -->
+    <label for='satellite'>satellite</label>
+</div>	
+
+<div id="cityControlPanel" class="controlPanel panel">
+    <input type="radio" name="city" value="Shanghai" checked>上海<br/>
+    <input type="radio" name="city" value="Nanjing">南京<br/>
+    <input type="radio" name="city" value="Guangzhou">广州<br/>
 </div>
 
 <div id="noiseControlPanel" class="controlPanel panel">
