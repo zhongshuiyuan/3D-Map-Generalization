@@ -63,6 +63,20 @@ var map = new mapboxgl.Map({
     hash: true,
 });
 
+var labelLayerId="shanghai_L1";
+// function getLabelLayerId() { 
+//     var layers = map.getStyle().layers;
+//     var labelLayerId;
+//     //示例代码在这里有问题，去掉layers[i].layout['text-field']并倒序
+//     for (var i = layers.length-1; i >= 0; i--) {
+//         if (layers[i].type === 'symbol') {
+//             labelLayerId = layers[i].id;
+//             break;
+//         }
+//     }
+//     return labelLayerId;
+// }
+
 //这是别人做好的噪音地图
 // mapboxgl.accessToken = 'pk.eyJ1IjoibW9yZ2Vua2FmZmVlIiwiYSI6IjIzcmN0NlkifQ.0LRTNgCc-envt9d5MzR75w';
 // var map = new mapboxgl.Map({
@@ -75,22 +89,22 @@ var map = new mapboxgl.Map({
 //     hash: true,
 // });
 
-//切换底图的风格 (这部分功能暂时去掉，没有多大用)
-// var layerList = document.getElementById('menu');
-// var inputs = layerList.getElementsByTagName('input');
-// function switchLayer(layer) {
-//     var layerId = layer.target.id;
-//     map.setStyle('mapbox://styles/mapbox/' + layerId + '-v9');
-// }
-// for (var i = 0; i < inputs.length; i++) {
-//     inputs[i].onclick = switchLayer;
-// }
+//切换底图的风格 展示轨迹线用暗的底图
+var layerList = document.getElementById('menu');
+var inputs = layerList.getElementsByTagName('input');
+function switchLayer(layer) {
+    var layerId = layer.target.id;
+    map.setStyle('mapbox://styles/mapbox/' + layerId + '-v9');
+}
+for (var i = 0; i < inputs.length; i++) {
+    inputs[i].onclick = switchLayer;
+}
 
 //换数据 每个级别的数据都添加进去
 map.on('styledata', function() {
     // map.addSource('paraGeneral',dicSource['paraGeneral']);
     for(var i=1;i<=9;i++){
-        var xixi='L'+i.toString();
+        var xixi='shanghai_L'+i.toString();
         var minLevel=16-0.5*i;//特定缩放级别对应特定数据
         var maxLevel=16.5-0.5*i;
         if(i==1){maxLevel=22}
@@ -150,29 +164,73 @@ function controlLayerVisibility(elementId, sourceId, sourceObj, layerId, layerOb
     };
 }
 
-//道路噪音的热力图
-controlLayerVisibility("road_noise", "road_noise", {
-    type: 'image',
-    url: 'heatmap.png',//使用arcgis核密度做好的
-    coordinates: [
-        [121.4149, 31.3149],
-        [121.4902, 31.3149],
-        [121.4902, 31.2587],
-        [121.4149, 31.2587]
-    ]
-}, "road_noise", {
-    id: 'road_noise',
-    source: 'road_noise',
-    type: 'raster',
-    paint: {
-        'raster-opacity': 0.7
+var noiseToggle = document.getElementById("road_noise");
+noiseToggle.onclick = function () { 
+    if (map.getSource("road_noise_32levels") === undefined) { 
+        addNoise('road_noise_32levels', '32levels.png', 15.5, 17.5);
+        addNoise('road_noise_16levels', '16levels.png', 13.5, 15.5);
+        addNoise('road_noise_8levels', '8levels.png', 11.5, 13.5);
+        addNoise('road_noise_4levels', '4levels.png', 10, 11.5);
     }
-}, "L1");
+    if (this.checked===true){
+        map.setLayoutProperty('road_noise_32levels', 'visibility', 'visible');
+        map.setLayoutProperty('road_noise_16levels','visibility','visible');
+        map.setLayoutProperty('road_noise_8levels', 'visibility', 'visible');
+        map.setLayoutProperty('road_noise_4levels','visibility','visible');
+    }else{
+        map.setLayoutProperty('road_noise_32levels', 'visibility', 'none');
+        map.setLayoutProperty('road_noise_16levels','visibility','none');
+        map.setLayoutProperty('road_noise_8levels', 'visibility', 'none');
+        map.setLayoutProperty('road_noise_4levels','visibility','none');
+    }
+}
+
+function addNoise(id,url,minzoom,maxzoom) { 
+    map.addSource(id, {
+        type: 'image',
+        url: url,//使用arcgis核密度做好的
+        coordinates: [
+            [121.3817, 31.2302],
+            [121.4571, 31.2302],
+            [121.4571, 31.1739],
+            [121.3817, 31.1739]
+        ]
+    });
+    map.addLayer({
+        id: id,
+        source: id,
+        type: 'raster',
+        minzoom: minzoom,
+        maxzoom: maxzoom,
+        paint: {
+            'raster-opacity': 0.7
+        }
+    }, labelLayerId);
+}
+
+//道路噪音的热力图
+// controlLayerVisibility("road_noise", "road_noise", {
+//     type: 'image',
+//     url: '32levels.png',//使用arcgis核密度做好的
+//     coordinates: [
+//         [121.3817, 31.2302],
+//         [121.4571, 31.2302],
+//         [121.4571, 31.1739],
+//         [121.3817, 31.1739]
+//     ]
+// }, "road_noise", {
+//     id: 'road_noise',
+//     source: 'road_noise',
+//     type: 'raster',
+//     paint: {
+//         'raster-opacity': 0.7
+//     }
+// }, labelLayerId);
 
 //每段路有个噪音值的道路
 controlLayerVisibility("noise_road", "noise_road", {
     "type": "geojson",
-    "data": "road_noise.geojson"
+    "data": "noise_road.geojson"
 }, "noise_road", {
     "id": "noise_road",
     "type": "line",
@@ -191,7 +249,7 @@ controlLayerVisibility("noise_road", "noise_road", {
         ],
         "line-width": 5
     }
-}, "L1");
+}, labelLayerId);
 
 //产生噪音的点
 controlLayerVisibility("noise_point", "noise_point", {
@@ -211,14 +269,14 @@ controlLayerVisibility("noise_point", "noise_point", {
             12, [
                 "interpolate",
                 ["linear"],
-                ["get", "value"],
+                ["get", "decibel"],
                 1, 1,
                 100, 4
             ],
             16, [
                 "interpolate",
                 ["linear"],
-                ["get", "value"],
+                ["get", "decibel"],
                 1, 1,
                 100, 8
             ]
@@ -227,7 +285,7 @@ controlLayerVisibility("noise_point", "noise_point", {
         "circle-color": [
             "interpolate",
             ["linear"],
-            ["get", "value"],
+            ["get", "decibel"],
             1, "rgba(33,102,172,0)",
             20, "rgb(103,169,207)",
             40, "rgb(209,229,240)",
@@ -238,7 +296,7 @@ controlLayerVisibility("noise_point", "noise_point", {
         "circle-stroke-color": "white",
         "circle-stroke-width": 1
     }
-}, "L1");
+}, labelLayerId);
 
 //点构成的噪音热力图
 controlLayerVisibility("point_noise", "noise_point", {
@@ -254,7 +312,7 @@ controlLayerVisibility("point_noise", "noise_point", {
         "heatmap-weight": [
             "interpolate",
             ["linear"],
-            ["get", "value"],
+            ["get", "decibel"],
             0, 1,
             100, 5
         ],
@@ -290,7 +348,7 @@ controlLayerVisibility("point_noise", "noise_point", {
             20, 25
         ],
     }
-}, "L1");
+}, labelLayerId);
 
 //光照相关控件加进来并绑定事件
 var canvEl = document.getElementById('canv');
@@ -335,7 +393,7 @@ document.getElementById('intensity').addEventListener('input', function(e) {
 });
 
 //地图加载时即显示的图层
-map.on('load',function(){    
+map.on('load', function () {
     var cbxRoadNoise = document.getElementById("road_noise");
     cbxRoadNoise.click();
 });  
