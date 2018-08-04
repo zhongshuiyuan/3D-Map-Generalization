@@ -4,13 +4,12 @@
     <meta charset='utf-8' />
     <title>上海-调参综合</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.47.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.47.0/mapbox-gl.css' rel='stylesheet' />
     <script type="text/javascript" src="https://www.mapbox.com/bites/00295/globe.js"></script>
     <script type="text/javascript" src="https://www.mapbox.com/bites/00295/colorpicker.js"></script>
     <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
-    <link href='https://www.mapbox.com/base/latest/base.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-language/v0.10.0/mapbox-gl-language.js'></script>
     <style>
         body { 
             margin:0; 
@@ -35,13 +34,13 @@
             font-family: 'Open Sans', sans-serif;  
         }  
         #menu p {
-            margin: 2px;/*缩小行间距节约空间*/
+            margin: 2px;
         }
         #menu button {
             margin: 2px;
         }  
         .controlPanel {
-            display: none;/*点了各自按钮才显示*/
+            display: none;
         }
         .grabby {
             cursor: -webkit-grab;
@@ -64,7 +63,6 @@
 <div id='map'></div>
 
 <div id='menu' class="panel">
-    <p>说明：L1~L9图层分别在zoom=15.5、15.0、...、12.0</p>
     <p id="xixi">zoom:xxx;     layer:xxx;</p>
     <button id="cityControl">城市</button>
     <button id="baselayerControl">底图</button>
@@ -120,5 +118,6 @@
     <p>这部分待集成进来</p>
 </div> -->
 <script src="init.js"></script>
+<script src="environment.js"></script>
 </body>
 </html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Use correct character set. -->
+  <meta charset="utf-8">
+  <!-- Tell IE to use the latest, best version. -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+  <title>Hello World!</title>
+  <script src="./Cesium/Cesium.js"></script>
+  <style>
+      @import url(./Cesium/Widgets/widgets.css);
+      html, body, #cesiumContainer {
+          width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+      }
+      #controlPanel {
+          position: absolute;top: 10px;left: 10px;
+      }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <div id="controlPanel"><button id="cloud">云</button><button id="fog">雾</button></div>  
+  <script>
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkNDExMThhMy00YTQ4LTQwOWEtODBiNS00NTMzNjQ3Yzc4YzQiLCJpZCI6MTkwOSwiaWF0IjoxNTMwNjc2MTU3fQ.T34LmrHdT2oLq4apjTezSWp-aSMKmcHRKy-UKgBTWRA';
+
+    var mapbox = new Cesium.MapboxImageryProvider({
+        mapId: 'mapbox.streets',
+        accessToken: 'pk.eyJ1IjoicGFuY2FrZSIsImEiOiJjajgxc2hqemUwMjNpMndtaWU1cHRhcDJvIn0.AkD8g3KIKm865IhQjGuP1A'
+    });
+
+    var viewer = new Cesium.Viewer('cesiumContainer', {
+        shouldAnimate : true,//必须是true才能用粒子系统
+        terrainProvider: Cesium.createWorldTerrain(),
+        timeline:false,
+        animation:false,
+        imageryProvider: mapbox,
+        homeButton: false,
+        baseLayerPicker:false,
+        projectionPicker:false,
+        navigationHelpButton:false
+    });
+    var scene = viewer.scene;
+    scene.globe.depthTestAgainstTerrain = true;//根据高度和地形的关系来控制primimtive的显示与隐藏，而不是直接贴在地形上
+
+    var fileB="afterAgg3.geojson";
+    var promise=Cesium.GeoJsonDataSource.load(fileB);
+    //viewer.zoomTo(promise);        //定位到加载数据的地点
+    scene.camera.setView({
+        destination : new Cesium.Cartesian3(1339678.0261052276, -4656683.573316623, 4145458.2655724576),//镜头高一点才能看到云
+        orientation: {
+            heading : 6.283185307179586,
+            pitch : -0.7861448711702566,
+            roll : 6.283185307179586
+        }
+    });    
+    renderBuilding(promise);       //调用渲染函数，开始渲染建筑物
+    
+    //设置建筑物颜色的函数，按高度值设置渐变颜色
+    function buildingColor(building){
+        if(building.properties.height>=150){
+            building.polygon.material = Cesium.Color.fromCssColorString("#662506");
+        }
+        else if(building.properties.height>=100){
+            building.polygon.material = Cesium.Color.fromCssColorString("#cc4c02");
+        }
+        else if(building.properties.height>=50){
+            building.polygon.material = Cesium.Color.fromCssColorString("#fe9929");
+        }
+        else if(building.properties.height>=25){
+            building.polygon.material = Cesium.Color.fromCssColorString("#fee391");
+        }
+        else {
+            building.polygon.material = Cesium.Color.fromCssColorString("#ffffe5");
+        }
+    }
+
+    //渲染建筑物
+    function renderBuilding(promise){
+        promise.then(function(dataSource) {
+            viewer.dataSources.removeAll();   //先将viewer中的数据清除
+            viewer.dataSources.add(dataSource);
+            entities = dataSource.entities.values;
+            // console.log(entities);
+            for (var i = 0; i < entities.length; i++) {
+                //key=entities[i].properties.id;
+
+                //buildingObj[key]=entities[i];
+                // var entity = entities[i];
+                entities[i].polygon.outline=false;
+                buildingColor(entities[i]);
+                entities[i].polygon.extrudedHeight = entities[i].properties.height||10;  //渲染建筑物高度，默认为10m
+            }
+            // console.log(Object.getOwnPropertyNames(buildingObj).length);
+        });
+    }
+
+    //下面是云的粒子系统
+    var viewModel = {
+        emissionRate : 0.0,
+        gravity : 0.0,
+        minimumParticleLife : 300,
+        maximumParticleLife :300,
+        minimumSpeed : 10,
+        maximumSpeed : 20,
+        startScale : 2,
+        endScale : 2,
+        particleSize : 100,
+    };
+    
+    var cloudCount=3;
+    var particleSystems=[];
+    for (var i=0;i<cloudCount;i++){
+    	var cloudPosition=Cesium.Cartesian3.fromDegrees(//云的位置在曼哈顿上空随机出现
+    		-73.954107+0.002*Math.floor(Math.random()*20-10),
+    		40.782456+0.002*Math.floor(Math.random()*20-10), 
+    		5000+10*Math.floor(Math.random()*20-10)
+    	);
+
+    	particleSystems[i]=scene.primitives.add(new Cesium.ParticleSystem({
+	        image : './cloud10.png',
+
+	        startColor : Cesium.Color.WHITE.withAlpha(0.7),
+	        //endColor : Cesium.Color.WHITE.withAlpha(0.3),
+
+	        startScale : 2,
+	        endScale : 2,
+
+	        minimumParticleLife : 300,
+	        maximumParticleLife : 300,
+
+	        minimumSpeed : 10,
+	        maximumSpeed : 20,
+
+	        //云的大小 随机数
+	        imageSize : new Cesium.Cartesian2(Math.floor(Math.random()*200+100), Math.floor(Math.random()*200+100)),
+
+	        emissionRate : 0,//就一开始喷，后面就固定了
+	        bursts : [
+	            new Cesium.ParticleBurst({time : 0.0, minimum : 1, maximum : 2}),
+	        ],
+
+	        //lifetime : 16.0,
+
+	        emitter : new Cesium.CircleEmitter(2.0),
+
+	        modelMatrix : new Cesium.Matrix4.fromTranslation(cloudPosition),
+	        //emitterModelMatrix : computeEmitterModelMatrix(),
+
+	        updateCallback : applyGravity
+	    }));
+    }    
+
+    var cloudRadius=30000;
+    var gravityScratch = new Cesium.Cartesian3();
+    function applyGravity(p, dt) {
+        // We need to compute a local up vector for each particle in geocentric space.
+        var position = p.position;
+
+        Cesium.Cartesian3.normalize(position, gravityScratch);
+        Cesium.Cartesian3.multiplyByScalar(gravityScratch, viewModel.gravity * dt, gravityScratch);
+
+        p.velocity = Cesium.Cartesian3.add(p.velocity, gravityScratch, p.velocity);
+
+        var distance = Cesium.Cartesian3.distance(scene.camera.position, p.position);
+	    if (distance > cloudRadius) {
+	        p.startColor.alpha = 0.0;
+	        //particleSystems[0].show=false;
+	    } else {
+	        p.startColor.alpha = (cloudRadius-distance)/cloudRadius;
+	        //particleSystems[0].show=true;
+	    }
+    }
+
+    //雾
+    scene.skyAtmosphere.hueShift = -0.8;
+    scene.skyAtmosphere.saturationShift = -0.7;
+    scene.skyAtmosphere.brightnessShift = -0.33;
+
+    scene.fog.density = 0.003;
+    scene.fog.minimumBrightness = 0.8;
+
+    //云雾开关
+    var btnCloud=document.getElementById("cloud");
+    var btnFog=document.getElementById("fog");
+    btnCloud.onclick=function(){
+    	for (var i in particleSystems){
+    		if (particleSystems[i].show===true){
+	            particleSystems[i].show=false;
+	        }else{
+	            particleSystems[i].show=true;
+	        }
+    	}
+    };
+    btnFog.onclick=function(){
+        if (scene.fog.enabled===true){
+            scene.fog.enabled=false;
+        }else{
+            scene.fog.enabled=true;
+        }
+    };
+  </script>
+</body>
+</html>
