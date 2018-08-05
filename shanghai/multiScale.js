@@ -47,6 +47,8 @@ toggleMultiScale.onclick = function () {
         },
         //"filter": ["all",["==", "lv", 3]]
     });
+    var divLoadingMessage=document.getElementById("loadingMessage");
+    divLoadingMessage.style.display="block";
     drawViewPointAndScope();
 
     //建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
@@ -93,11 +95,10 @@ var viewCenterLine;
 var viewCurrentRoad;
 
 //实时查看地图是否动了
-setInterval("changeInfo()",50);
-var isFirst=true;
-function changeInfo() {
+setInterval("checkMove()",50);
+function checkMove() {
     if (multiScaleFlag == false) return;
-    if (isFirst&&map.getSource("Manhattan")&&map.isSourceLoaded("Manhattan")===true){
+    if (map.getSource("Manhattan")&&map.isSourceLoaded("Manhattan")===true){
         var divLoadingMessage=document.getElementById("loadingMessage");
         divLoadingMessage.style.display="none";
         isFirst=false;//if里面的代码只执行一次 其实就算每次都执行也无所谓 没找到合适的事件

@@ -111,15 +111,17 @@ function switchCity(e) {
 
 //换数据 每个级别的数据都添加进去
 map.on('styledata', function () {
-    //上海
-    for(var i=1;i<=9;i++){
-        var xixi='shanghai_L'+i.toString();
-        var minLevel = layerZoom[9 - i];//特定缩放级别对应特定数据
-        var maxLevel = layerZoom[10 - i];
-        map.addSource(xixi,constructSource(xixi));
-        map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
+    addBuildingForACity("shanghai");
+    addBuildingForACity("guangzhou");
+    function addBuildingForACity(cityName) { 
+        for (var i = 1; i <= 9; i++){
+            var xixi=cityName+'_L'+i.toString();
+            var minLevel = layerZoom[9 - i];//特定缩放级别对应特定数据
+            var maxLevel = layerZoom[10 - i];
+            map.addSource(xixi,constructSource(xixi));
+            map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
+        }
     }
-    //这里继续加其他城市
 });
 
 map.addControl(new mapboxgl.NavigationControl());
@@ -134,7 +136,7 @@ map.on('load', function () {
     var cbxRoadNoise = document.getElementById("road_noise");
     cbxRoadNoise.click();
     addFlagForCities();
-    // addLanduseData(); 
+    //addLanduseData(); 
 }); 
 
 //控制面板的显示和切换 关键是按钮和面板id的命名

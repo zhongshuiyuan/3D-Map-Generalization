@@ -20,10 +20,10 @@ function controlLayerVisibility(elementId, sourceId, sourceObj, layerId, layerOb
 var noiseToggle = document.getElementById("road_noise");
 noiseToggle.onclick = function () { 
     if (map.getSource("road_noise_32levels") === undefined) { 
-        addNoise('road_noise_32levels', '32levels.png', 16, 18);
-        addNoise('road_noise_16levels', '16levels.png', 14, 16);
-        addNoise('road_noise_8levels', '8levels.png', 12.5, 14);
-        addNoise('road_noise_4levels', '4levels.png', 11, 12.5);
+        addNoise('road_noise_32levels', 'extend32.png', 16, 18);
+        addNoise('road_noise_16levels', 'extend16.png', 14, 16);
+        addNoise('road_noise_8levels', 'extend8.png', 12.5, 14);
+        addNoise('road_noise_4levels', 'extend4.png', 11, 12.5);
     }
     if (this.checked===true){
         map.setLayoutProperty('road_noise_32levels', 'visibility', 'visible');
@@ -43,10 +43,10 @@ function addNoise(id,url,minzoom,maxzoom) {
         type: 'image',
         url: url,//使用arcgis核密度做好的
         coordinates: [
-            [121.3817, 31.2302],
-            [121.4571, 31.2302],
-            [121.4571, 31.1739],
-            [121.3817, 31.1739]
+            [121.2602, 31.2428],
+            [121.4457, 31.2428],
+            [121.4457, 31.0840],
+            [121.2602, 31.0840]
         ]
     });
     map.addLayer({
@@ -60,25 +60,6 @@ function addNoise(id,url,minzoom,maxzoom) {
         }
     }, labelLayerId);
 }
-
-//道路噪音的热力图
-// controlLayerVisibility("road_noise", "road_noise", {
-//     type: 'image',
-//     url: '32levels.png',//使用arcgis核密度做好的
-//     coordinates: [
-//         [121.3817, 31.2302],
-//         [121.4571, 31.2302],
-//         [121.4571, 31.1739],
-//         [121.3817, 31.1739]
-//     ]
-// }, "road_noise", {
-//     id: 'road_noise',
-//     source: 'road_noise',
-//     type: 'raster',
-//     paint: {
-//         'raster-opacity': 0.7
-//     }
-// }, labelLayerId);
 
 //每段路有个噪音值的道路
 controlLayerVisibility("noise_road", "noise_road", {
