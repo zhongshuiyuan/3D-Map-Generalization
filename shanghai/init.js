@@ -69,6 +69,11 @@ var map = new mapboxgl.Map({
 });
 var labelLayerId = "shanghai_L1";//建筑里最先加进去的一个，噪音等在它下面
 var layerZoom = [11, 12, 13, 14, 15, 15.5, 16, 16.5, 17, 22];//建筑九个级别对应的zoom范围，先认为每个城市一样
+var positions = {
+    guangzhou: [113.25871364943879, 23.128997163128673],
+    shanghai: [121.42658554279558, 31.162356610593136],
+    nanjing: [118.79055594872085, 32.05376236060384]
+};
 
 //切换底图的风格 展示轨迹线用暗的底图
 var layerList = document.getElementById('baselayerControlPanel');
@@ -91,13 +96,13 @@ function switchCity(e) {
     var city = e.target.value;
     switch (city) { 
         case "Shanghai":
-            map.panTo([121.42658554279558, 31.162356610593136]);
+            map.panTo(positions.shanghai);
             break;
         case "Nanjing":
-            map.panTo([118.79055594872085, 32.05376236060384]);
+            map.panTo(positions.nanjing);
             break;
         case "Guangzhou":
-            map.panTo([113.25871364943879, 23.128997163128673]);
+            map.panTo(positions.guangzhou);
             break;
         default:
             break;    
@@ -128,22 +133,78 @@ map.addControl(language);
 map.on('load', function () {
     var cbxRoadNoise = document.getElementById("road_noise");
     cbxRoadNoise.click();
+    addFlagForCities();
+    // addLanduseData(); 
 }); 
 
 //控制面板的显示和切换 关键是按钮和面板id的命名
 var menu = document.getElementById("menu");
 var buttons = menu.getElementsByTagName("button");
 for (let i = 0; i < buttons.length; i++) {
-    buttons[i].onclick = function (e) {
-        var panelId = e.target.id + "Panel";
-        var panel = document.getElementById(panelId);
-        panel.style.display = panel.style.display === "block" ? "none" : "block";
-        for (let j = 0; j < buttons.length; j++) {
-            if (j != i) {
-                panelId = buttons[j].id + "Panel";
-                panel = document.getElementById(panelId);
-                panel.style.display = "none";
+    //只给那些用来打开更详细的控制面板的按钮加这个事件
+    if (buttons[i].className == "openPanel") { 
+        buttons[i].onclick = function (e) {
+            var panelId = e.target.id + "Panel";
+            var panel = document.getElementById(panelId);
+            panel.style.display = panel.style.display === "block" ? "none" : "block";
+            for (let j = 0; j < buttons.length; j++) {
+                if (j != i) {
+                    panelId = buttons[j].id + "Panel";
+                    panel = document.getElementById(panelId);
+                    panel.style.display = "none";
+                }
             }
         }
+    }    
+}
+
+//做了三维建筑的城市用一个旗子标记
+function addFlagForCities() {
+    var cityCoordinates = [];
+    for (var key in positions) { 
+        cityCoordinates.push(positions[key]);
     }
+    map.addSource("cityFlags", {
+        "type": "geojson",
+        "data": {
+            "type": "MultiPoint",
+            "coordinates": cityCoordinates
+        }
+    });    
+    map.addLayer({
+        "id": "cityFlags",
+        "source": "cityFlags",
+        "type": "symbol",
+        "maxzoom":11,
+        "layout": {
+            "icon-image": "embassy-15",
+            "icon-rotation-alignment": "map",
+            "icon-size":2
+        }
+    });
+}
+
+//创意城室内地图
+// var popup = new mapboxgl.Popup({closeOnClick: false})
+//     .setLngLat([-96, 37.8])
+//     .setHTML('<div"><iframe src="amap_indoor.html" style="width:500px;height:300px;"></iframe></div>')
+//     .addTo(map);
+
+//三调数据
+function addLanduseData() { 
+    map.addSource("yangzhou_landuse", {
+        'type':'vector',
+        'scheme':'tms',
+        'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/general%3Ayangzhou_landuse@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
+    });
+    map.addLayer({
+        "id": "yangzhou_landuse",
+        "source": "yangzhou_landuse",
+        "source-layer":"yangzhou_landuse",
+        "type": "fill",
+        "paint": {
+            'fill-color': '#088',
+            'fill-opacity': 0.8
+        }
+    })
 }
