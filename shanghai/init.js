@@ -60,7 +60,7 @@ function changeInfo(){
 mapboxgl.accessToken = 'pk.eyJ1IjoiYXJzbHh5IiwiYSI6ImNqZzRzemViajJ4MWUzM3Bjc3Z2M283ajMifQ.VuhGIVxu7Y9H7V4gUxTMdw';
 var map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/basic-v9',
+    style: 'mapbox://styles/mapbox/dark-v9',
     center: [121.42658554279558, 31.162356610593136],//南京118.79055594872085, 32.05376236060384//广州113.25871364943879, 23.128997163128673
     zoom: 13.8,
     pitch: 50,
@@ -110,7 +110,8 @@ function switchCity(e) {
 }
 
 //换数据 每个级别的数据都添加进去
-map.on('styledata', function () {
+// map.on('styledata', function () {
+map.on('load', function () {
     addBuildingForACity("shanghai");
     addBuildingForACity("guangzhou");
     function addBuildingForACity(cityName) { 
@@ -122,6 +123,12 @@ map.on('styledata', function () {
             map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
         }
     }
+    //添加一些其他的地图一加载时即显示的图层
+    var cbxRoadNoise = document.getElementById("road_noise");
+    cbxRoadNoise.click();
+    document.getElementById("dynamic_symbol").click();
+    addFlagForCities();
+    //addLanduseData(); 
 });
 
 map.addControl(new mapboxgl.NavigationControl());
@@ -130,14 +137,6 @@ var language = new MapboxLanguage({
     defaultLanguage: 'zh'
 });
 map.addControl(language);
-
-//地图加载时即显示的图层
-map.on('load', function () {
-    var cbxRoadNoise = document.getElementById("road_noise");
-    cbxRoadNoise.click();
-    addFlagForCities();
-    //addLanduseData(); 
-}); 
 
 //控制面板的显示和切换 关键是按钮和面板id的命名
 var menu = document.getElementById("menu");
@@ -150,7 +149,7 @@ for (let i = 0; i < buttons.length; i++) {
             var panel = document.getElementById(panelId);
             panel.style.display = panel.style.display === "block" ? "none" : "block";
             for (let j = 0; j < buttons.length; j++) {
-                if (j != i) {
+                if (j != i&&buttons[j].className == "openPanel") {
                     panelId = buttons[j].id + "Panel";
                     panel = document.getElementById(panelId);
                     panel.style.display = "none";
