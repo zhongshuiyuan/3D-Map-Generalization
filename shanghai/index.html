@@ -101,11 +101,11 @@
 
 <div id='menu' class="panel">
     <p id="xixi">zoom:xxx;     layer:xxx;</p>
-    <button id="cityControl" class="openPanel">城市切换</button>
+    <input type="checkbox" id="3dbuildings">三维建筑
+    <input type="checkbox" id="road_noise">噪音
     <!-- <button id="baselayerControl" class="openPanel">底图切换</button><br/> -->
-    <!-- <button id="trajectoryControl" class="openPanel">轨迹</button> -->
     <button id="load-trips">Load Trips</button>
-    <button id="noiseControl" class="openPanel">噪音</button>
+    <button id="cityControl" class="openPanel">城市切换</button>
     <button id="lightControl" class="openPanel">光照</button>
     <button id="multiScaleControl" class="openPanel">多尺度展示</button>
     <!-- <button id="cloudControl" class="openPanel">云雾</button> -->
@@ -126,7 +126,8 @@
         <hr />
         <label>Time: <span id='trips-time-value'>2007-02-20 07:00:00</span></label>
         <input id='trips-time-slider' type='range' min='0' max='300' step='1' value='0' />
-        <span id='zoom-value'>zoom</span>
+        
+        <label>Width: <span id='trips-width-value'>5.0</span><input id="trips-width-slider" type="range" min='5' max='10' step='0.5' value='5.0' /></label>
     </div>
 </div>
 
@@ -147,16 +148,9 @@
 
 <div id="cityControlPanel" class="controlPanel panel">
     <input type="radio" name="city" value="Shanghai" checked>上海<br/>
-    <input type="radio" name="city" value="Nanjing">南京<br/>
     <input type="radio" name="city" value="Guangzhou">广州<br/>
-</div>
-
-<div id="noiseControlPanel" class="controlPanel panel">
-    <input type="checkbox" id="noise_road">道路<br/>
-    <input type="checkbox" id="road_noise">噪音<br/>
-    <input type="checkbox" id="dynamic_symbol">声波动态符号
-    <!-- <input type="checkbox" id="noise_point">点<br/>
-    <input type="checkbox" id="point_noise">点噪音<br/> -->
+    <input type="radio" name="city" value="Nanjing">南京<br/>
+    <input type="radio" name="city" value="Wuhan">武汉<br/>
 </div>
 
 <div id='lightControlPanel' class='controlPanel panel'>

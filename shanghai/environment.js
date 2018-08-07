@@ -20,10 +20,10 @@ function controlLayerVisibility(elementId, sourceId, sourceObj, layerId, layerOb
 var noiseToggle = document.getElementById("road_noise");
 noiseToggle.onclick = function () { 
     if (map.getSource("road_noise_32levels") === undefined) { 
-        addNoise('road_noise_32levels', 'extend32.png', 16, 18);
-        addNoise('road_noise_16levels', 'extend16.png', 14, 16);
-        addNoise('road_noise_8levels', 'extend8.png', 12.5, 14);
-        addNoise('road_noise_4levels', 'extend4.png', 11, 12.5);
+        addNoise('road_noise_32levels', 'road32.png', 16, 18);
+        addNoise('road_noise_16levels', 'road16.png', 14, 16);
+        addNoise('road_noise_8levels', 'road8.png', 12.5, 14);
+        addNoise('road_noise_4levels', 'road4.png', 11, 12.5);
     }
     if (this.checked===true){
         map.setLayoutProperty('road_noise_32levels', 'visibility', 'visible');
@@ -43,10 +43,10 @@ function addNoise(id,url,minzoom,maxzoom) {
         type: 'image',
         url: url,//使用arcgis核密度做好的
         coordinates: [
-            [121.2602, 31.2428],
-            [121.4457, 31.2428],
-            [121.4457, 31.0840],
-            [121.2602, 31.0840]
+            [121.2981, 31.2414],
+            [121.4660, 31.2414],
+            [121.4660, 31.1232],
+            [121.2981, 31.1232]
         ]
     });
     map.addLayer({
@@ -61,78 +61,78 @@ function addNoise(id,url,minzoom,maxzoom) {
     }, labelLayerId);
 }
 
-//动态符号
-document.getElementById("dynamic_symbol").addEventListener("click", toggleDynamicSymbol);
-const soundWaveFrameCount = 6;
-var soundWaveInterval;
-function toggleDynamicSymbol() {    
-    if (this.checked == true) {
-        dynamicSymbol();
-    } else {
-        clearInterval(soundWaveInterval);
-        for (var i = 0; i < soundWaveFrameCount; i++) { 
-            map.setPaintProperty('shengbo' + i, 'raster-opacity', 0);
-        }
-    }
-}
-function dynamicSymbol() {    
-    for (var i = 0; i < soundWaveFrameCount; i++) {
-        if (map.getSource("shengbo" + i) === undefined) { 
-            map.addSource("shengbo" + i, {
-                type: 'image',
-                url: 'shengbo/shengbo' + i + '.png',
-                coordinates: [
-                    [121.4148, 31.1637],
-                    [121.4349, 31.1637],
-                    [121.4349, 31.1472],
-                    [121.4148, 31.1472]
-                ]
-            });        
-            map.addLayer({
-                id: 'shengbo' + i,
-                source: 'shengbo' + i,
-                type: 'raster',
-                paint: {
-                    'raster-opacity': 0,
-                    'raster-opacity-transition': {
-                        duration: 0
-                    }
-                }
-            });
-        }        
-    }
+// //动态符号
+// document.getElementById("dynamic_symbol").addEventListener("click", toggleDynamicSymbol);
+// const soundWaveFrameCount = 6;
+// var soundWaveInterval;
+// function toggleDynamicSymbol() {    
+//     if (this.checked == true) {
+//         dynamicSymbol();
+//     } else {
+//         clearInterval(soundWaveInterval);
+//         for (var i = 0; i < soundWaveFrameCount; i++) { 
+//             map.setPaintProperty('shengbo' + i, 'raster-opacity', 0);
+//         }
+//     }
+// }
+// function dynamicSymbol() {    
+//     for (var i = 0; i < soundWaveFrameCount; i++) {
+//         if (map.getSource("shengbo" + i) === undefined) { 
+//             map.addSource("shengbo" + i, {
+//                 type: 'image',
+//                 url: 'shengbo/shengbo' + i + '.png',
+//                 coordinates: [
+//                     [121.4148, 31.1637],
+//                     [121.4349, 31.1637],
+//                     [121.4349, 31.1472],
+//                     [121.4148, 31.1472]
+//                 ]
+//             });        
+//             map.addLayer({
+//                 id: 'shengbo' + i,
+//                 source: 'shengbo' + i,
+//                 type: 'raster',
+//                 paint: {
+//                     'raster-opacity': 0,
+//                     'raster-opacity-transition': {
+//                         duration: 0
+//                     }
+//                 }
+//             });
+//         }        
+//     }
 
-    var frame = soundWaveFrameCount - 1;
-    soundWaveInterval=setInterval(function() {
-        map.setPaintProperty('shengbo' + frame, 'raster-opacity', 0);
-        frame = (frame + 1) % soundWaveFrameCount;
-        map.setPaintProperty('shengbo' + frame, 'raster-opacity', 1);
-    }, 200);
-}
+//     var frame = soundWaveFrameCount - 1;
+//     soundWaveInterval=setInterval(function() {
+//         map.setPaintProperty('shengbo' + frame, 'raster-opacity', 0);
+//         frame = (frame + 1) % soundWaveFrameCount;
+//         map.setPaintProperty('shengbo' + frame, 'raster-opacity', 1);
+//     }, 200);
+// }
 
-//每段路有个噪音值的道路
-controlLayerVisibility("noise_road", "noise_road", {
-    "type": "geojson",
-    "data": "noise_road.geojson"
-}, "noise_road", {
-    "id": "noise_road",
-    "type": "line",
-    "source": "noise_road",
-    "layout": {
-        "line-join": "round",
-        "line-cap": "round"
-    },
-    "paint": {
-        "line-color": [
-            "interpolate",
-            ["linear"],
-            ["get", "decibel"],
-            0, "rgb(255,255,0)",
-            99, "rgb(255,0,0)"
-        ],
-        "line-width": 5
-    }
-    }, labelLayerId);
+// //每段路有个噪音值的道路
+// controlLayerVisibility("noise_road", "noise_road", {
+//     "type": "geojson",
+//     "data": "noise_road.geojson"
+// }, "noise_road", {
+//     "id": "noise_road",
+//     "type": "line",
+//     "source": "noise_road",
+//     "layout": {
+//         "line-join": "round",
+//         "line-cap": "round"
+//     },
+//     "paint": {
+//         "line-color": [
+//             "interpolate",
+//             ["linear"],
+//             ["get", "decibel"],
+//             0, "rgb(255,255,0)",
+//             99, "rgb(255,0,0)"
+//         ],
+//         "line-width": 5
+//     }
+//     }, labelLayerId);
 
 // //产生噪音的点
 // controlLayerVisibility("noise_point", "noise_point", {
