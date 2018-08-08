@@ -57,7 +57,7 @@ document.getElementById("load-trips").addEventListener("click", function() {
     isLoadTrips = !isLoadTrips;
     
     if(isLoadTrips) {
-        document.getElementById("load-trips").innerHTML = "Unload Trips";
+        document.getElementById("load-trips").innerHTML = "关闭轨迹";
         document.getElementById('trips').style.display = "block";
         //document.getElementById('trips-slider').disabled = true;
         var radios = document.getElementsByName('speed');
@@ -96,7 +96,7 @@ document.getElementById("load-trips").addEventListener("click", function() {
         document.getElementById('trips-time-slider').removeEventListener('input', changeTripsTime);
         document.getElementById('trips-width-slider').removeEventListener('input', changeTripsWidth);
 
-        document.getElementById("load-trips").innerHTML = "Load Trips";
+        document.getElementById("load-trips").innerHTML = "加载轨迹";
         document.getElementById('trips').style.display = "none";
 
         // 初始化trips面板

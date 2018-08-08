@@ -119,7 +119,7 @@ map.on('load', function () {
     document.getElementById("3dbuildings").click();   
     document.getElementById("road_noise").click();
     addFlagForCities();
-    //addLanduseData();
+    addLanduseData();
     addIndoorMap();
 });
 
@@ -223,26 +223,31 @@ function addIndoorMap() {
     map.addLayer({
         id: "indoorMap",
         source: "indoorMap",
-        type: "fill",
+        type: "fill-extrusion",
         paint: {
-            "fill-opacity": 0.0
+            "fill-extrusion-opacity": 0.0,
+            "fill-extrusion-height": 50
         }
     });
-    map.on('mouseenter', 'indoorMap', function(e) {
+    map.on('click', 'indoorMap', function(e) {
         // Change the cursor style as a UI indicator.
         map.getCanvas().style.cursor = 'pointer';
         console.log(e);
         console.log(e.features);
         //创意城室内地图
-        indoorPopup = new mapboxgl.Popup({closeOnClick: false})
-            .setLngLat(e.lngLat)
-            .setHTML('<div"><iframe src="amap_indoor.html" style="width:500px;height:300px;"></iframe></div>')
-            .addTo(map);
+        // new mapboxgl.Popup()
+        //     .setLngLat(coordinates)
+        //     .setHTML(description)
+        //     .addTo(map);
+        new mapboxgl.Popup({closeOnClick: false})
+        .setLngLat([114.3508887547859,30.52887244911892])
+        .setHTML('<div"><iframe src="amap_indoor.html" style="width:500px;height:300px;"></iframe></div>')
+        .addTo(map);       
     });
-    map.on('mouseleave', 'indoorMap', function() {
-        map.getCanvas().style.cursor = '';
-        indoorPopup.remove();
-    });
+    // map.on('mouseleave', 'indoorMap', function() {
+    //     map.getCanvas().style.cursor = '';
+    //     indoorPopup.remove();
+    // });
 }
 
 //三调数据
