@@ -21,7 +21,9 @@ toggleMultiScale.onclick = function () {
     map.jumpTo({
         center: [-73.952, 40.782],
         zoom: 13.5,
-        bearing: 30//专为曼哈顿而设
+        bearing: 30,
+        pitch:60
+        //专为曼哈顿而设
     });
     //初始化，添加建筑、中心点、缓冲区
     map.addSource('Manhattan',{
@@ -44,16 +46,15 @@ toggleMultiScale.onclick = function () {
             'fill-extrusion-height': ["get", "height"],
             'fill-extrusion-opacity': 0.8//该属性针对图层，不能控制到每个要素
         },
-        //"filter": ["all",["==", "visible", true]]
     });
-    var divLoadingMessage=document.getElementById("loadingMessage");
-    divLoadingMessage.style.display="block";
+    // var divLoadingMessage=document.getElementById("loadingMessage");
+    // divLoadingMessage.style.display="block";
     drawViewPointAndScope();
 
-    //建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
+    //建筑物加载完成后遍历每个建筑，存入object里方便取
     map.on("sourcedata",function(e){
         var isFirst=true;
-        if (e.source.data===file&&e.sourceDataType!=="metadata"&&isFirst){
+        if (e.source.data===file&&e.sourceDataType!=="metadata"&&isFirst===true){
             //注意：这里只能获取viewport范围内的要素，一开始的zoom要够大
             isFirst=false;//if里面的步骤只执行一次
             var features=map.querySourceFeatures('Manhattan');//注意：是source的id，不是Layer的
@@ -61,35 +62,19 @@ toggleMultiScale.onclick = function () {
                 var uniqueFeatures = getUniqueFeatures(features, "OBJECTID");
                 //根据id，给每个要素设置一个高度，一开始设成真实高度，后面根据需要设成0来隐藏
                 for (var i in uniqueFeatures){
-                    // var height=uniqueFeatures[i].properties.height;
-                    // var id=uniqueFeatures[i].properties.OBJECTID;
-                    // map.setFeatureState({source: 'Manhattan', id: id},{ height: height});
-                    //uniqueFeatures.properties.visible = true;
                     //把所有建筑存入buildingObj里 后面就是对他循环
                     key=uniqueFeatures[i].properties.id;
                     buildingObj[key]=uniqueFeatures[i];
                 }
             }
-            //一开始先用properties设置高度，setFeatureState完了之后就可改用feature-state
-            //map.setPaintProperty("Manhattan-extrusion","fill-extrusion-height",["feature-state", "height"]);//这个可能还会触发一次sourcedata事件
             changeBuildings();
-            map.on('moveend', changeBuildings());
         }    
     });
 };
 
-//用来比较位置是否有改变
-var oldPosition={
-    center:map.getCenter(),
-    zoom:map.getZoom(),
-    pitch:map.getPitch(),
-    bearing:map.getBearing()
-};
-
 var multiScaleFlag = false;
 var file = "LOD_simplify_merge_child_id.geojson";
-var buildingsGeojson;
-var filteredId = ["in", "OBJECTID"];
+var filteredId = ["in", "OBJECTID"];//用这个来控制建筑显示隐藏
 var buildingObj={};//存放所有建筑，key是id，方便访问
 var farDis=1;//划分详细程度的距离，常量，km
 var closeDis=0.5;
@@ -97,29 +82,21 @@ var viewPoint;//三种选项对应的三种缓冲区中心
 var viewCenterLine;
 var viewCurrentRoad;
 
-// $.getJSON(file, function(data){
-//     buildingsGeojson = data;//引用类型
-//     data.features.forEach((item)=>{
-//         if (item.properties.lv===3){
-//             item.properties.visible=true;
-//         }else{
-//             item.properties.visible=false;
-//         }
-//         key=item.properties.id;
-//         buildingObj[key]=item;
-//     });
-// });
-
-// //实时查看地图是否动了
+// //实时查看地图是否动了 这个可以灵活控制多少毫秒刷新一次，比map.onmove好用
+//用来比较位置是否有改变
+// var oldPosition={
+//     center:map.getCenter(),
+//     zoom:map.getZoom(),
+//     pitch:map.getPitch(),
+//     bearing:map.getBearing()
+// };
 // setInterval("checkMove()",50);
 // function checkMove() {
 //     if (multiScaleFlag == false) return;
 //     if (map.getSource("Manhattan")&&map.isSourceLoaded("Manhattan")===true){
 //         var divLoadingMessage=document.getElementById("loadingMessage");
 //         divLoadingMessage.style.display="none";
-//         isFirst=false;//if里面的代码只执行一次 其实就算每次都执行也无所谓 没找到合适的事件
 //     }
-
 //     //当前地图位置
 //     var currPosition={
 //         center:map.getCenter(),
@@ -134,8 +111,15 @@ var viewCurrentRoad;
 //     changeBuildings();
 // }
 
+//由于filter in 后面列举的id太多导致速度慢，暂时用moveend
+map.on('moveend', function () { 
+    if (multiScaleFlag == false) return;
+    if (map.getLayer("Manhattan-extrusion")!==undefined) { 
+        changeBuildings();
+    }
+});
 
-
+//根据id控制建筑的显示隐藏
 function showOrHideFeature(id,showOrHide) { 
     if (showOrHide) {
         var index=filteredId.indexOf(id);
@@ -150,7 +134,7 @@ function showOrHideFeature(id,showOrHide) {
     }
 }
 
-//切换数据 经过计算距离，对每个建筑setFeatureState，控制不同级别建筑的显示隐藏
+//切换数据 经过计算距离，找到要显示的建筑
 function changeBuildings(){
 	drawViewPointAndScope();  
     //遍历每个建筑，计算建筑到基准点的距离
@@ -158,9 +142,8 @@ function changeBuildings(){
         //只管三级，减少次数
         if(buildingObj[obj].properties['lv']!=3){continue;}
         var distance=computeDistance(buildingObj[obj]);
-        //当前遍历到的三级建筑的id和高度
+        //当前遍历到的三级建筑的id
         var id=buildingObj[obj].properties.OBJECTID;
-        var height=buildingObj[obj].properties.height;
         //够远，显示三级，不显示子节点一二级
         if (distance>=farDis){
             //显示三级            
