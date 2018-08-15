@@ -1,5 +1,6 @@
 var toggleMultiScale = document.getElementById("startMultiScale");
 toggleMultiScale.onclick = function () {
+    //关闭多尺度展示
     if (this.innerText === "关闭") { 
         this.innerText = "开始";
         multiScaleFlag = false;
@@ -13,24 +14,24 @@ toggleMultiScale.onclick = function () {
         map.removeSource("closeBuffer");        
         return;
     }
+
+    //打开多尺度展示
     multiScaleFlag = true;
     this.innerText = "关闭";
-    //map.panTo([-73.952, 40.782]);
     map.jumpTo({
         center: [-73.952, 40.782],
         zoom: 13.5,
         bearing: 30//专为曼哈顿而设
     });
-    ////初始化，添加建筑、中心点、缓冲区
+    //初始化，添加建筑、中心点、缓冲区
     map.addSource('Manhattan',{
         'type': 'geojson',
-        'data': file
+        'data': buildingsGeojson
     });
     map.addLayer({
         'id': 'Manhattan-extrusion',
         'type': 'fill-extrusion',
         'source': 'Manhattan',        
-        'layout': {},
         'paint': {
             'fill-extrusion-color': [
                 'interpolate',
@@ -40,12 +41,10 @@ toggleMultiScale.onclick = function () {
                 75, 'rgb(253,174,97)',
                 150, "rgb(215,25,28)",
             ],
-            //从feature-state获取高度，改变会即时生效，设为真实高度或0（即隐藏）
-            // 'fill-extrusion-height': ["feature-state", "height"],
-            'fill-extrusion-height': ["get", "height"],//在给每个要素设置了feature-state之前先用属性值
+            'fill-extrusion-height': ["get", "height"],
             'fill-extrusion-opacity': 0.8//该属性针对图层，不能控制到每个要素
         },
-        //"filter": ["all",["==", "lv", 3]]
+        "filter": ["all",["==", "visible", true]]
     });
     var divLoadingMessage=document.getElementById("loadingMessage");
     divLoadingMessage.style.display="block";
@@ -55,23 +54,24 @@ toggleMultiScale.onclick = function () {
     map.on("sourcedata",function(e){
         var isFirst=true;
         if (e.source.data===file&&e.sourceDataType!=="metadata"&&isFirst){
-            //注意：这里只能获取viewport范围内的要素，一开始的zoom要够大
-            isFirst=false;//if里面的步骤只执行一次
-            var features=map.querySourceFeatures('Manhattan');//注意：是source的id，不是Layer的
-            if (features) {
-                var uniqueFeatures = getUniqueFeatures(features, "OBJECTID");
-                //根据id，给每个要素设置一个高度，一开始设成真实高度，后面根据需要设成0来隐藏
-                for (var i in uniqueFeatures){
-                    var height=uniqueFeatures[i].properties.height;
-                    var id=uniqueFeatures[i].properties.OBJECTID;
-                    map.setFeatureState({source: 'Manhattan', id: id},{ height: height});
-                    //把所有建筑存入buildingObj里 后面就是对他循环
-                    key=uniqueFeatures[i].properties.id;
-                    buildingObj[key]=uniqueFeatures[i];
-                }
-            }
+            // //注意：这里只能获取viewport范围内的要素，一开始的zoom要够大
+            // isFirst=false;//if里面的步骤只执行一次
+            // var features=map.querySourceFeatures('Manhattan');//注意：是source的id，不是Layer的
+            // if (features) {
+            //     var uniqueFeatures = getUniqueFeatures(features, "OBJECTID");
+            //     //根据id，给每个要素设置一个高度，一开始设成真实高度，后面根据需要设成0来隐藏
+            //     for (var i in uniqueFeatures){
+            //         // var height=uniqueFeatures[i].properties.height;
+            //         // var id=uniqueFeatures[i].properties.OBJECTID;
+            //         // map.setFeatureState({source: 'Manhattan', id: id},{ height: height});
+            //         uniqueFeatures.properties.visible = true;
+            //         //把所有建筑存入buildingObj里 后面就是对他循环
+            //         key=uniqueFeatures[i].properties.id;
+            //         buildingObj[key]=uniqueFeatures[i];
+            //     }
+            // }
             //一开始先用properties设置高度，setFeatureState完了之后就可改用feature-state
-            map.setPaintProperty("Manhattan-extrusion","fill-extrusion-height",["feature-state", "height"]);//这个可能还会触发一次sourcedata事件
+            //map.setPaintProperty("Manhattan-extrusion","fill-extrusion-height",["feature-state", "height"]);//这个可能还会触发一次sourcedata事件
             changeBuildings();
         }    
     });
@@ -86,13 +86,27 @@ var oldPosition={
 };
 
 var multiScaleFlag = false;
-var file="LOD_simplify_merge_child_id.geojson";
+var file = "LOD_simplify_merge_child_id.geojson";
+var buildingsGeojson;
 var buildingObj={};//存放所有建筑，key是id，方便访问
 var farDis=1;//划分详细程度的距离，常量，km
 var closeDis=0.5;
 var viewPoint;//三种选项对应的三种缓冲区中心
 var viewCenterLine;
 var viewCurrentRoad;
+
+$.getJSON(file, function(data){
+    buildingsGeojson = data;//引用类型
+    data.features.forEach((item)=>{
+        if (item.properties.lv===3){
+            item.properties.visible=true;
+        }else{
+            item.properties.visible=false;
+        }
+        key=item.properties.id;
+        buildingObj[key]=item;
+    });
+});
 
 //实时查看地图是否动了
 setInterval("checkMove()",50);
@@ -132,26 +146,30 @@ function changeBuildings(){
         //够远，显示三级，不显示子节点一二级
         if (distance>=farDis){
             //显示三级            
-            map.setFeatureState({source: 'Manhattan', id: id},{ height: height});
+            //map.setFeatureState({source: 'Manhattan', id: id},{ height: height});
+            buildingsGeojson.features[id-1].properties.visible = true;
             //不显示子节点一二级
             var lod2Str=buildingObj[obj].properties.child;
             var lod2Obj=lod2Str.split('-');
             for(var obj2 in lod2Obj){
                 //不显示二级
                 var id2=buildingObj[lod2Obj[obj2]].properties.OBJECTID;
-                map.setFeatureState({source: 'Manhattan', id: id2},{ height: 0});
+                //map.setFeatureState({source: 'Manhattan', id: id2},{ height: 0});
+                buildingsGeojson.features[id2-1].properties.visible = false;
                 var lod3Str=buildingObj[lod2Obj[obj2]].properties.child;
                 var lod3Obj=lod3Str.split('-');
                 for(var obj3 in lod3Obj){
                     //不显示一级
                     var id3=buildingObj[lod3Obj[obj3]].properties.OBJECTID;
-                    map.setFeatureState({source: 'Manhattan', id: id3},{ height: 0});
+                    //map.setFeatureState({source: 'Manhattan', id: id3},{ height: 0});
+                    buildingsGeojson.features[id3-1].properties.visible = false;
                 }
             }
         }
         //不够远不显示三级，显示二级或一级
         else if(distance<farDis){
-            map.setFeatureState({source: 'Manhattan', id: id},{ height: 0});
+            //map.setFeatureState({source: 'Manhattan', id: id},{ height: 0});
+            buildingsGeojson.features[id-1].properties.visible = false;
             //如果距离符合二级，显示二级，不显示对应一级
             if(distance>=closeDis){
                 var lod2Str=buildingObj[obj].properties.child;
@@ -160,13 +178,15 @@ function changeBuildings(){
                     //显示二级
                     var id2=buildingObj[lod2Obj[obj2]].properties.OBJECTID;
                     var height2=buildingObj[lod2Obj[obj2]].properties.height;
-                    map.setFeatureState({source: 'Manhattan', id: id2},{ height: height2});
+                    //map.setFeatureState({source: 'Manhattan', id: id2},{ height: height2});
+                    buildingsGeojson.features[id2-1].properties.visible = true;
                     var lod3Str=buildingObj[lod2Obj[obj2]].properties.child;
                     var lod3Obj=lod3Str.split('-');
                     for(var obj3 in lod3Obj){
                         //不显示一级
                         var id3=buildingObj[lod3Obj[obj3]].properties.OBJECTID;
-                        map.setFeatureState({source: 'Manhattan', id: id3},{ height: 0});
+                        //map.setFeatureState({source: 'Manhattan', id: id3},{ height: 0});
+                        buildingsGeojson.features[id3-1].properties.visible = false;
                     }
                 }
             }
@@ -177,19 +197,22 @@ function changeBuildings(){
                 for(var obj2 in lod2Obj){
                     //不显示二级
                     var id2=buildingObj[lod2Obj[obj2]].properties.OBJECTID;
-                    map.setFeatureState({source: 'Manhattan', id: id2},{ height: 0});
+                    //map.setFeatureState({source: 'Manhattan', id: id2},{ height: 0});
+                    buildingsGeojson.features[id2-1].properties.visible = false;
                     var lod3Str=buildingObj[lod2Obj[obj2]].properties.child;
                     var lod3Obj=lod3Str.split('-');
                     for(var obj3 in lod3Obj){
                         //显示一级
                         var id3=buildingObj[lod3Obj[obj3]].properties.OBJECTID;
                         var height3=buildingObj[lod3Obj[obj3]].properties.height;
-                        map.setFeatureState({source: 'Manhattan', id: id3},{ height: height3});
+                        //map.setFeatureState({source: 'Manhattan', id: id3},{ height: height3});
+                        buildingsGeojson.features[id3-1].properties.visible = true;
                     }
                 }
             }
         }
-    }    
+    }
+    map.getSource("Manhattan").setData(buildingsGeojson);
 }
 
 //切换不同的控制细节层次的方法
