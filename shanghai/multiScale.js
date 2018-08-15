@@ -148,6 +148,7 @@ function changeBuildings(){
         if (distance>=farDis){
             //显示三级            
             showOrHideFeature(id, true);
+            // map.setFeatureState({source: 'Manhattan', id: id},{ height: 0});
             //不显示子节点一二级
             var lod2Str=buildingObj[obj].properties.child;
             var lod2Obj=lod2Str.split('-');
