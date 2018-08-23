@@ -1,16 +1,22 @@
 var flag23D = false;
 var bottomLine, verticalDistance;
-var example23DLayerName = 'shanghai_L1_geojson';
+var example23DLayerName = 'shanghai_L1_geojson';//只对上海L1做了二三维混搭，矢量瓦片setfeaturestate时找不到id
 var example23DData = 'shanghai_L1_clip.geojson';
-var example23DDataAfter;
-document.getElementById("23D").addEventListener("click", function () {
-    if (flag23D === false) { 
+var example23DDataAfter;//对原始geojson做处理加上id，方便setfeaturestate
+
+document.getElementById("23D").addEventListener("change", function () {
+    if (flag23D === false) {
         flag23D = true;
+        if (document.getElementById("3dbuildings").checked == true) { 
+            document.getElementById("3dbuildings").click();//关闭瓦片的建筑，显示geojson的建筑
+        }
         map.jumpTo({
-            center: [121.386189, 31.178983],
-            zoom: 19
+            center: [121.380146, 31.181931],//目前只是clip了一个片区来做
+            zoom: 17,
+            pitch:60
         });
-        $.ajaxSettings.async = false; // 同步
+        
+        $.ajaxSettings.async = false; //同步
         $.getJSON(example23DData, function (data) {
             var i = 1;
             data.features.forEach(function (item, index) {
@@ -19,14 +25,15 @@ document.getElementById("23D").addEventListener("click", function () {
             });
             example23DDataAfter = data;
         });
-        map.addSource(example23DLayerName,{
+        
+        map.addSource(example23DLayerName, {
             'type': 'geojson',
             'data': example23DDataAfter
         });
         map.addLayer({
             'id': example23DLayerName,
             'type': 'fill-extrusion',
-            'source': example23DLayerName,        
+            'source': example23DLayerName,
             'paint': {
                 'fill-extrusion-color': [
                     'interpolate',
@@ -37,30 +44,21 @@ document.getElementById("23D").addEventListener("click", function () {
                     150, "rgb(215,25,28)",
                 ],
                 'fill-extrusion-height': ["get", "height"],
-                'fill-extrusion-opacity': 0.8//该属性针对图层，不能控制到每个要素
+                'fill-extrusion-opacity': 0.8//该属性针对图层，不能控制到每个要素，否则可以做个渐变
             }
         });
         
-        //建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
-        map.on("sourcedata",function(e){
-            if (e.source.data===file&&e.sourceDataType!=="metadata"&&map.isFirst===undefined){
-                //注意：这里只能获取viewport范围内的要素，一开始的zoom要够大
-                map.isFirst=true;//if里面的步骤只执行一次 还有别的办法吧，这种不好
-                var features=map.querySourceFeatures(example23DData);//注意：是source的id，不是Layer的
-                if (features) {
-                    var uniqueFeatures = getUniqueFeatures(features, "OBJECTID");
-                    //根据id，给每个要素设置一个高度，真实高度或0
-                    for (var i in uniqueFeatures){
-                        var height=uniqueFeatures[i].properties.height;
-                        var id=uniqueFeatures[i].properties.OBJECTID;
-                        map.setFeatureState({source: example23DData, id: id},{ height: height});
-                    }
-                }
-                changeHeight();        
-                //map.setPaintProperty(example23DLayerName,"fill-extrusion-height",["feature-state", "height"])
-            }    
-        });
-        map.setPaintProperty(example23DLayerName,"fill-extrusion-height",["feature-state", "height"])
+        //还需要找到合适的事件，能query到rendered建筑的时候就changeheight一次，否则都是扁的
+        // //建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
+        // map.on("sourcedata",function(e){
+        //     
+        // });
+        changeHeight();
+        map.setPaintProperty(example23DLayerName, "fill-extrusion-height", ["feature-state", "height"])
+    } else { 
+        flag23D = false;
+        map.removeSource(example23DLayerName);
+        map.removeLayer(example23DLayerName);
     }
 });
 
@@ -70,17 +68,18 @@ map.on('move', function () {
     }  
 });
 
+//鼠标移动时把近的放高远的放低接近二维
 function changeHeight() { 
     var features = map.queryRenderedFeatures({ layers: [example23DLayerName] });
     updateBottomLine();
-    features.forEach((item, index) => {
+    features.forEach((item) => {
         var scale = compute23DScale(item);
-        var height = 5*item.properties.height * scale;
-        //  console.log(item.properties.height,scale);
+        var height = 5 * item.properties.height * scale;//稍微放大点突出差异
         map.setFeatureState({ source: example23DLayerName, id: item.id }, { height: height });
     });
 }
 
+//更新底线的位置，方便计算建筑的远近
 function updateBottomLine() { 
     var mapSize=map._containerDimensions();
     var screenX=mapSize[0];
@@ -95,14 +94,15 @@ function updateBottomLine() {
     bottomLine = turf.lineString([[bottomLeft.lng, bottomLeft.lat], [bottomRight.lng, bottomRight.lat]])
 }
 
+//计算缩放比例
 function compute23DScale(feature) {
     var polygon = turf.polygon(feature.geometry.coordinates);
     var centroid = turf.centroid(polygon).geometry.coordinates;
-    //centroid = [feature.properties.POINT_X, feature.properties.POINT_Y];
+    //centroid = [feature.properties.POINT_X, feature.properties.POINT_Y];//提前处理好，属性增加个位置更方便
     var nearestPoint = turf.nearestPointOnLine(bottomLine, centroid).geometry.coordinates;
     var from = turf.point(nearestPoint);
     var to=turf.point(centroid)
     var distance = turf.distance(from, to);
     var scale = 1- distance / verticalDistance;
-    return scale*scale;
+    return scale*scale;//平方，拉大差异
 }
