@@ -1,12 +1,10 @@
-var flag23D = false;
-var bottomLine, verticalDistance;
 var example23DLayerName = 'shanghai_L1_geojson';//只对上海L1做了二三维混搭，矢量瓦片setfeaturestate时找不到id
-var example23DData = 'shanghai_L1_clip.geojson';
+var example23DData = './data/shanghai_L1_clip.geojson';
 var example23DDataAfter;//对原始geojson做处理加上id，方便setfeaturestate
+var bottomLine, verticalDistance;
 
 document.getElementById("23D").addEventListener("change", function () {
-    if (flag23D === false) {
-        flag23D = true;
+    if (this.checked===true) {
         if (document.getElementById("3dbuildings").checked == true) { 
             document.getElementById("3dbuildings").click();//关闭瓦片的建筑，显示geojson的建筑
         }
@@ -47,30 +45,35 @@ document.getElementById("23D").addEventListener("change", function () {
                 'fill-extrusion-opacity': 0.8//该属性针对图层，不能控制到每个要素，否则可以做个渐变
             }
         });
-        
-        //还需要找到合适的事件，能query到rendered建筑的时候就changeheight一次，否则都是扁的
-        // //建筑物加载完成后遍历每个建筑，设置height这一feature-state，方便以后控制高度
-        // map.on("sourcedata",function(e){
-        //     
-        // });
-        changeHeight();
-        map.setPaintProperty(example23DLayerName, "fill-extrusion-height", ["feature-state", "height"])
+
+        map.on('move', changeHeight);
     } else { 
-        flag23D = false;
-        map.removeSource(example23DLayerName);
+        //flag23D = false;
         map.removeLayer(example23DLayerName);
+        map.removeSource(example23DLayerName);        
+        map.off('move', changeHeight);
     }
 });
 
-map.on('move', function () {
-    if (flag23D == true&&map.getSource(example23DLayerName) && map.isSourceLoaded(example23DLayerName) === true) { 
+var isFirst=true;
+function callback23DData(e) {        
+    if (isFirst && e.sourceId === example23DLayerName && e.isSourceLoaded === true) {
+        var features = map.queryRenderedFeatures({ layers: [example23DLayerName] });
+        if (!features.length) {
+            return;
+        }
+        console.log('23d source loaded!');
+        isFirst=false;
         changeHeight();
-    }  
-});
+        map.setPaintProperty(example23DLayerName, "fill-extrusion-height", ["feature-state", "height"]);
+    }
+}
+map.on('sourcedata', callback23DData);
 
 //鼠标移动时把近的放高远的放低接近二维
 function changeHeight() { 
     var features = map.queryRenderedFeatures({ layers: [example23DLayerName] });
+    console.log(features.length);
     updateBottomLine();
     features.forEach((item) => {
         var scale = compute23DScale(item);

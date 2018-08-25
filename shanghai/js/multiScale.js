@@ -73,7 +73,7 @@ toggleMultiScale.onclick = function () {
 };
 
 var multiScaleFlag = false;
-var file = "LOD_simplify_merge_child_id.geojson";
+var file = "./data/LOD_simplify_merge_child_id.geojson";
 var filteredId = ["in", "OBJECTID"];//用这个来控制建筑显示隐藏
 var buildingObj={};//存放所有建筑，key是id，方便访问
 var farDis=1;//划分详细程度的距离，常量，km

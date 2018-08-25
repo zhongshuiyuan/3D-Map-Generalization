@@ -1,4 +1,4 @@
-///********************控制噪音、光照、云雾等***********************/
+///********************控制噪音、光照、云雾等环境信息***********************/
 //添加源和图层并控制图层的显示隐藏
 function controlLayerVisibility(elementId, sourceId, sourceObj, layerId, layerObj, before) { 
     var toggle=document.getElementById(elementId);
@@ -20,10 +20,10 @@ function controlLayerVisibility(elementId, sourceId, sourceObj, layerId, layerOb
 var noiseToggle = document.getElementById("road_noise");
 noiseToggle.onclick = function () { 
     if (map.getSource("road_noise_32levels") === undefined) { 
-        addNoise('road_noise_32levels', 'road32.png', 16, 18);
-        addNoise('road_noise_16levels', 'road16.png', 14, 16);
-        addNoise('road_noise_8levels', 'road8.png', 12.5, 14);
-        addNoise('road_noise_4levels', 'road4.png', 11, 12.5);
+        addNoise('road_noise_32levels', './data/road32.png', 16, 18);
+        addNoise('road_noise_16levels', './data/road16.png', 14, 16);
+        addNoise('road_noise_8levels', './data/road8.png', 12.5, 14);
+        addNoise('road_noise_4levels', './data/road4.png', 11, 12.5);
     }
     if (this.checked===true){
         map.setLayoutProperty('road_noise_32levels', 'visibility', 'visible');

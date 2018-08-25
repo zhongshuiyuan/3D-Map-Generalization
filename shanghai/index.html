@@ -4,8 +4,8 @@
     <meta charset='utf-8' />
     <title>上海-调参综合</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.47.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.47.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.48.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.48.0/mapbox-gl.css' rel='stylesheet' />
     <script type="text/javascript" src="https://www.mapbox.com/bites/00295/globe.js"></script>
     <script type="text/javascript" src="https://www.mapbox.com/bites/00295/colorpicker.js"></script>
     <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
@@ -101,14 +101,15 @@
 
 <div id='menu' class="panel">
     <p id="xixi">zoom:xxx;     layer:xxx;</p>
-    <input type="checkbox" id="3dbuildings">三维建筑
-    <input type="checkbox" id="road_noise">噪音
-    <!-- <button id="baselayerControl" class="openPanel">底图切换</button><br/> -->
-    <button id="load-trips">加载轨迹</button><br/>
+    <input type="checkbox" id="3dbuildings"><label for="3dbuildings">三维建筑</label>
+    <input type="checkbox" id="road_noise"><label for="road_noise">噪音</label>
+    <input type="checkbox" id="23D"><label for="23D">二三维混搭</label>
+    <input type="checkbox" id="landuse"><label for="landuse">土地利用数据</label>
+    <button id="load-trips">加载轨迹</button>
     <button id="cityControl" class="openPanel">城市切换</button>
     <button id="lightControl" class="openPanel">光照</button>
     <button id="multiScaleControl" class="openPanel">多尺度展示</button>
-    <input type="checkbox" id="23D">二三维混搭
+    <!-- <button id="baselayerControl" class="openPanel">底图切换</button><br/> -->
     <!-- <button id="cloudControl" class="openPanel">云雾</button> -->
 </div>
 
@@ -182,10 +183,10 @@
 <!-- <div id="cloudControlPanel" class="controlPanel panel">
     <p>这部分待集成进来</p>
 </div> -->
-<script src="init.js"></script>
-<script src="environment.js"></script>
-<script src="animate.js"></script>
-<script src="multiScale.js"></script>
-<script src="23D.js"></script>
+<script src="./js/init.js"></script>
+<script src="./js/environment.js"></script>
+<script src="./js/animate.js"></script>
+<script src="./js/multiScale.js"></script>
+<script src="./js/23D.js"></script>
 </body>
 </html>

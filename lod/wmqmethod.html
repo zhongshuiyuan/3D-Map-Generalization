@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>多尺度混搭</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@5/turf.min.js"></script>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<style>
+    #menu {
+        position: absolute;
+        background: #fff;
+        padding: 10px;
+        font-family: 'Open Sans', sans-serif;
+    }
+</style>
+
+<div id='map'></div>
+<div id='menu'>
+    <input id='basic' type='radio' name='rtoggle' value='basic'>
+    <label for='basic'>basic</label>
+    <input id='streets' type='radio' name='rtoggle' value='streets'>
+    <label for='streets'>streets</label>
+    <input id='bright' type='radio' name='rtoggle' value='bright'  checked='checked'>
+    <label for='bright'>bright</label>
+    <input id='light' type='radio' name='rtoggle' value='light'>
+    <label for='light'>light</label>
+    <input id='dark' type='radio' name='rtoggle' value='dark'>
+    <label for='dark'>dark</label>
+    <input id='satellite' type='radio' name='rtoggle' value='satellite'>
+    <label for='satellite'>satellite</label>
+</div>
+<script>
+    //初始化地图
+    mapboxgl.accessToken = 'pk.eyJ1IjoicGFuY2FrZSIsImEiOiJjajgxc2hqemUwMjNpMndtaWU1cHRhcDJvIn0.AkD8g3KIKm865IhQjGuP1A';
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/basic-v9',
+        center: [121.42658554279558, 31.162356610593136],
+        zoom: 15.5,
+        pitch: 60,
+        bearing: 0,
+        //hash: true,
+    });
+    //图层、含数据
+    var dicSource={
+        'L1':{
+            'type':'vector',
+            'scheme':'tms',
+            'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel:shanghai_L1@EPSG:900913@pbf/{z}/{x}/{y}.pbf']                
+        },
+        'L3':{
+            'type':'vector',
+            'scheme':'tms',
+            'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel:shanghai_L3@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
+        },
+    };
+    var dicLayer={
+        'L1':{
+            'id': 'layer1',
+            'source': 'L1',
+            'source-layer':'shanghai_L1',
+            'type': 'fill-extrusion',
+            'paint': {
+                'fill-extrusion-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'height'],
+                    0, 'rgb(255,255,191)',
+                    75, 'rgb(253,174,97)',
+                    150, "rgb(215,25,28)",
+                ],
+                'fill-extrusion-height': ['get', 'height'],
+                'fill-extrusion-opacity': .8,
+            }
+        },
+        'L3':{
+            'id': 'layer3',
+            'source': 'L3',
+            'source-layer':'shanghai_L3',
+            // 'maxzoom':2,
+            'type': 'fill-extrusion',
+            'paint': {
+                'fill-extrusion-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'height'],
+                    0, 'rgb(255,255,191)',
+                    75, 'rgb(253,174,97)',
+                    150, "rgb(215,25,28)",
+                ],
+                'fill-extrusion-height': ['get', 'height'],
+                'fill-extrusion-opacity': 0.8,
+            }
+        },
+    };
+
+    var layerList = document.getElementById('menu');
+    var inputs = layerList.getElementsByTagName('input');
+    function switchLayer(layer) {
+        var layerId = layer.target.id;
+        map.setStyle('mapbox://styles/mapbox/' + layerId + '-v9');
+    }
+    for (var i = 0; i < inputs.length; i++) {
+        inputs[i].onclick = switchLayer;
+    }
+
+    map.on('load', function() {
+        for(var i=1;i<=3;i=i+2){
+            var xixi='L'+i.toString();
+            map.addSource(xixi,dicSource[xixi]);
+            map.addLayer(dicLayer[xixi]);
+        }
+    });
+    map.addControl(new mapboxgl.NavigationControl());
+    map.addControl(new mapboxgl.FullscreenControl());
+
+    ////***************多尺度混搭的分割线******************////
+    const r=500;//Web Mercator 米
+    map.on('move',function(){
+        changeBuildings();
+    });
+
+    //画分界线
+    map.on('load',function(){
+        map.addSource('r',{
+            'type': 'geojson',
+            'data': {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Polygon',
+                    'coordinates': [[]]
+                }
+            }
+        });
+
+        map.addLayer({
+            'id': 'r',
+            'type': 'fill',
+            'source':'r',
+            'layout': {},
+            'paint': {
+                'fill-outline-color': '#088',
+                'fill-opacity': 0.1
+            }
+        });
+    });
+    
+    var isFirst=true;
+    function sourceCallback() {        
+        if (isFirst && map.getSource('L3') && map.isSourceLoaded('L3')) {
+            console.log('source loaded!');
+            isFirst=false;
+            changeBuildings();
+        }
+    }
+
+    map.on('sourcedata', sourceCallback);
+
+    function changeBuildings(){
+        //更新视点，根据视点计算并设置filter
+        var viewPoint=computeViewPoint();
+        var pt = turf.point(viewPoint);
+        var [a,b] = turf.toMercator(pt).geometry.coordinates;//filter用投影坐标系
+        map.setFilter("layer1",["all",
+                [">","POINT_X",a-r],
+                ["<","POINT_X",a+r],
+                [">","POINT_Y",b-r],
+                ["<","POINT_Y",b+r]
+            ]);
+        map.setFilter("layer3",["any",
+                ["any",["<","POINT_X",a-r],[">","POINT_X",a+r]],
+                ["any",["<","POINT_Y",b-r],[">","POINT_Y",b+r]]                
+            ]);
+
+        //更新分界线
+        var nw=toWGS84([a+r,b-r]);
+        var ne=toWGS84([a+r,b+r]);
+        var sw=toWGS84([a-r,b-r]);
+        var se=toWGS84([a-r,b+r]); 
+        map.getSource("r").setData({
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Polygon',
+                    'coordinates': [[nw,ne,se,sw,nw]]
+                }
+            });
+    }
+
+    function toWGS84(arr){
+        var pt = turf.point(arr);
+        var converted = turf.toWgs84(pt);
+        return converted.geometry.coordinates;
+    }
+
+    //计算视点的坐标
+    function computeViewPoint(){
+        //把屏幕下方(稍微偏上)中点转化为地理坐标
+        var mapSize=map._containerDimensions();
+        var screenX=mapSize[0]/2;
+        var screenY=mapSize[1];
+        var objCoordinates=map.unproject([screenX,screenY]);
+        var arrCoordinates=[objCoordinates.lng,objCoordinates.lat];
+        return arrCoordinates;
+    }
+
+    //测试合并前的几个要素的坐标是不是合并后的要素的坐标
+    // map.on('click','layer1',function(e){
+    //     var features = map.queryRenderedFeatures(e.point,{layers:['layer1']});
+    //     console.log(features[0].properties);
+    // });
+
+</script>
+
+</body>
+</html>
