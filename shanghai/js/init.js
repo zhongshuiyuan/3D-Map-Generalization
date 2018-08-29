@@ -193,8 +193,8 @@ function constructLayer(myId,mySource,myLayer,myMin,myMax){
             // ],
             'fill-extrusion-opacity': 0.8,
         }
-    }
-};
+    };
+}
 
 map.addControl(new mapboxgl.NavigationControl());
 map.addControl(new mapboxgl.FullscreenControl());
