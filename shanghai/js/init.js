@@ -74,6 +74,7 @@ function changeInfo(){
     for (var i = 0; i < layerZoom.length; i++) { 
         if (zoomNow > layerZoom[i]) { 
             levelNow = 9 - i;
+            break;
         }
     }
     layerList.textContent="zoom:"+zoomNow.toFixed(1)+"     "+"layer:"+levelNow.toString();
