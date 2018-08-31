@@ -2,7 +2,7 @@
 //初始化地图
 var positions = {
     guangzhou: [113.25871364943879, 23.128997163128673],
-    shanghai: [121.42658554279558, 31.162356610593136],
+    shanghai: [121.444534,31.171876],
     nanjing: [118.79055594872085, 32.05376236060384],
     wuhan:[114.363068,30.532645]
 };
@@ -12,7 +12,7 @@ var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/basic-v9',
     center: positions.shanghai,
-    zoom: 13.8,
+    zoom: 16.2,
     pitch: 50,
     bearing: 0,
     hash: true,
@@ -74,7 +74,6 @@ function changeInfo(){
     for (var i = 0; i < layerZoom.length; i++) { 
         if (zoomNow > layerZoom[i]) { 
             levelNow = 9 - i;
-            break;
         }
     }
     layerList.textContent="zoom:"+zoomNow.toFixed(1)+"     "+"layer:"+levelNow.toString();
@@ -158,8 +157,8 @@ function addBuildingForACity(cityName) {
 function constructSource(mySource){
     return   {
         'type':'vector',
-            'scheme':'tms',
-            'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel%3A'+mySource+'@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
+        'scheme':'tms',
+        'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel%3A'+mySource+'@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
     };                
 }
 
@@ -265,6 +264,9 @@ function addIndoorMap() {
 const landuseLayerName = "yangzhou_landuse";
 document.getElementById("landuse").addEventListener('change', function () {
     if (!map.getSource(landuseLayerName)) {
+        map.jumpTo({
+            center:  [119.55169496501293, 32.33337104579164]
+        });
         addLanduseData();
     }
     var visibility = this.checked ? "visible" : "none";

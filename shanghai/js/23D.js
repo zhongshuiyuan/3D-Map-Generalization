@@ -28,6 +28,11 @@ document.getElementById("23D").addEventListener("change", function () {
             'type': 'geojson',
             'data': example23DDataAfter
         });
+        // map.addSource(example23DLayerName, {
+        //     'type':'vector',
+        //     'scheme':'tms',
+        //     'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel%3Ashanghai_L1@EPSG%3A900913@geojson']
+        // })
         map.addLayer({
             'id': example23DLayerName,
             'type': 'fill-extrusion',
@@ -73,11 +78,10 @@ map.on('sourcedata', callback23DData);
 //鼠标移动时把近的放高远的放低接近二维
 function changeHeight() { 
     var features = map.queryRenderedFeatures({ layers: [example23DLayerName] });
-    console.log(features.length);
     updateBottomLine();
     features.forEach((item) => {
         var scale = compute23DScale(item);
-        var height = 5 * item.properties.height * scale;//稍微放大点突出差异
+        var height = item.properties.height * scale;//稍微放大点突出差异
         map.setFeatureState({ source: example23DLayerName, id: item.id }, { height: height });
     });
 }
@@ -107,5 +111,16 @@ function compute23DScale(feature) {
     var to=turf.point(centroid)
     var distance = turf.distance(from, to);
     var scale = 1- distance / verticalDistance;
-    return scale*scale;//平方，拉大差异
+    return heightTransition(scale);//拉大差异
+}
+
+//近的三维，真实高度，远的二维，高度为0，中间过渡
+function heightTransition(x) {
+    if (x >= 0.7) {
+        return 1;
+    } else if (x <= 0.3) {
+        return 0;
+    } else { 
+        return 2.5 * x - 0.75;
+    }
 }
