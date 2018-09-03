@@ -12,89 +12,9 @@
     <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-language/v0.10.0/mapbox-gl-language.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@5/turf.min.js"></script>
     <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
-    <style>
-        body { 
-            margin:0; 
-            padding:0; 
-        }
-        #map { 
-            position:absolute; 
-            top:0; 
-            bottom:0; 
-            width:100%; 
-        }
-        .panel {
-            background-color: #404040;
-            color: #fff;
-            border-radius: 3px;
-            width: 25%;
-            max-width: 300px;
-            position: relative;
-            left:10px;
-            top:10px;
-            padding: 10px;
-            font-family: 'Open Sans', sans-serif;  
-        }  
-        #menu p {
-            margin: 2px;
-        }
-        #menu button {
-            margin: 2px;
-        }  
-        .controlPanel {
-            display: none;
-        }
-        .grabby {
-            cursor: -webkit-grab;
-            cursor: -moz-grab;
-            cursor: grab;
-        }
-        .grabbed {
-            cursor: -webkit-grabbing;
-            cursor: -moz-grabbing;
-            cursor: grabbing;
-        }
-        .crosshair {
-            cursor: -webkit-crosshair;
-            cursor: -moz-crosshair;
-            cursor: crosshair;
-        }
-        #loadingMessage {
-            position: absolute;
-            left: 50%; 
-            top: 50%;
-            transform: translate(-50%, -50%); 
-        }
-        .trips {
-            font:bold 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
-            position: absolute;
-            width: 25%;
-            top: 0;
-            right: 40px;
-            padding: 10px;
-            /* visibility: hidden; */
-            display: none;
-        }
-        .trips .trips-overlay-inner {
-            background-color: #fff;
-            box-shadow:0 1px 2px rgba(0, 0, 0, 0.20);
-            border-radius: 3px;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        .trips label {
-            display: block;
-            margin: 0 0 10px;
-        }
-        .trips #trips-time-slider {
-            background-color: transparent;
-            display: inline-block;
-            width: 100%;
-            position: relative;
-            margin: 0;
-            cursor: ew-resize;
-        }
-    </style>
+    <script src="./js/threebox.js" type="text/javascript"></script>
+    <link href="./css/style.css" rel="stylesheet" />
+    <script src="config.js"></script>
 </head>
 <body>
 <div id='map'></div>
@@ -102,9 +22,11 @@
 <div id='menu' class="panel">
     <p id="xixi">zoom:xxx;     layer:xxx;</p>
     <input type="checkbox" id="3dbuildings"><label for="3dbuildings">三维建筑</label>
-    <input type="checkbox" id="road_noise"><label for="road_noise">噪音</label>
-    <input type="checkbox" id="23D"><label for="23D">二三维混搭</label>
+    <input type="checkbox" id="noiseLayer"><label for="noiseLayer">噪音</label>
+    <input type="checkbox" id="cloudControl"><label for="cloudControl">云</label>
+    <!-- <input type="checkbox" id="23D"><label for="23D">二三维混搭</label> -->
     <input type="checkbox" id="landuse"><label for="landuse">土地利用数据</label>
+    <br />
     <button id="load-trips">加载轨迹</button>
     <button id="cityControl" class="openPanel">城市切换</button>
     <button id="lightControl" class="openPanel">光照</button>
@@ -184,10 +106,41 @@
 <!-- <div id="cloudControlPanel" class="controlPanel panel">
     <p>这部分待集成进来</p>
 </div> -->
+
+<!-- 云 -->
+<script id="vs" type="x-shader/x-vertex">
+    varying vec2 vUv;
+
+    void main() {
+
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+    }
+</script>
+<script id="fs" type="x-shader/x-fragment">
+    uniform sampler2D map;
+
+    uniform vec3 fogColor;
+    uniform float fogNear;
+    uniform float fogFar;
+
+    varying vec2 vUv;
+
+    void main() {
+        float depth = gl_FragCoord.z / gl_FragCoord.w;
+        float fogFactor = smoothstep( fogNear, fogFar, depth );
+
+        gl_FragColor = texture2D( map, vUv );
+        gl_FragColor.w *= pow( gl_FragCoord.z, 20.0 );
+        gl_FragColor = mix( gl_FragColor, vec4( fogColor, gl_FragColor.w ), fogFactor );
+    }
+</script>
+
 <script src="./js/init.js"></script>
 <script src="./js/environment.js"></script>
 <script src="./js/animate.js"></script>
 <script src="./js/multiScale.js"></script>
-<script src="./js/23D.js"></script>
+<!-- <script src="./js/23D.js"></script> -->
 </body>
 </html>

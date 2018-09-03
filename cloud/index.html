@@ -20,16 +20,17 @@
         background: #fff;
         padding: 10px;
         font-family: 'Open Sans', sans-serif;
+        z-index: 1001
     }
 </style>
 
 <div id='map'></div>
 <div id='menu'>
+    <input type="checkbox" id="cloud"><label for="cloud">云</label>
     <p>说明：L1~L9图层分别在zoom=15.5、15.0、...、12.0</p>
     <p id="xixi">zoom:xxx;     layer:xxx;</p>
 </div>
 <script id="vs" type="x-shader/x-vertex">
-
     varying vec2 vUv;
 
     void main() {
@@ -38,11 +39,8 @@
         gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 
     }
-
 </script>
-
 <script id="fs" type="x-shader/x-fragment">
-
     uniform sampler2D map;
 
     uniform vec3 fogColor;
@@ -52,16 +50,13 @@
     varying vec2 vUv;
 
     void main() {
-
         float depth = gl_FragCoord.z / gl_FragCoord.w;
         float fogFactor = smoothstep( fogNear, fogFar, depth );
 
         gl_FragColor = texture2D( map, vUv );
         gl_FragColor.w *= pow( gl_FragCoord.z, 20.0 );
         gl_FragColor = mix( gl_FragColor, vec4( fogColor, gl_FragColor.w ), fogFactor );
-
     }
-
 </script>
 <script>
     function constructSource(mySource){
@@ -113,7 +108,7 @@
         container: 'map',
         style: 'mapbox://styles/mapbox/basic-v9',
         center: [121.444534,31.171876],
-        zoom: 15,
+        zoom: 16.2,
         pitch: 60,
         bearing: 0,
         hash: true,
@@ -131,61 +126,73 @@
     map.addControl(new mapboxgl.NavigationControl());
     map.addControl(new mapboxgl.FullscreenControl());
 
+    //******云的分割线*******//
     map.on("load", function() {
-        // Initialize threebox
-        window.threebox = new Threebox(map);
-        threebox.setupDefaultLights();
+        document.getElementById("cloud").click();
+    });
 
-        //var 
-        geometry = new THREE.Geometry();
+    var cloudMesh;
+    document.getElementById("cloud").addEventListener("change",function(){
+        if (this.checked){
+            if (cloudMesh){
+                cloudMesh.visible=true;
+                return;
+            }
+            // Initialize threebox
+            window.threebox = new Threebox(map);
+            threebox.setupDefaultLights();
 
-        var texture = THREE.ImageUtils.loadTexture( 'cloud10.png');
-        texture.magFilter = THREE.LinearMipMapLinearFilter;
-        texture.minFilter = THREE.LinearMipMapLinearFilter;
+            var geometry = new THREE.Geometry();
 
-        var fog = new THREE.Fog( 0xffffff, - 100, 3000 );
+            var texture = THREE.ImageUtils.loadTexture( 'cloud10.png');
+            texture.magFilter = THREE.LinearMipMapLinearFilter;
+            texture.minFilter = THREE.LinearMipMapLinearFilter;
 
-        var material = new THREE.ShaderMaterial( {
-            uniforms: {
-                "map": { type: "t", value: texture },
-                "fogColor" : { type: "c", value: fog.color },
-                "fogNear" : { type: "f", value: fog.near },
-                "fogFar" : { type: "f", value: fog.far },
-            },
-            vertexShader: document.getElementById( 'vs' ).textContent,
-            fragmentShader: document.getElementById( 'fs' ).textContent,
-            depthWrite: false,
-            depthTest: false,
-            transparent: true
-        } );
+            var fog = new THREE.Fog( 0xffffff, - 100, 3000 );
 
-        var plane = new THREE.Mesh( new THREE.PlaneGeometry( 64, 64 ) );
+            var material = new THREE.ShaderMaterial( {
+                uniforms: {
+                    "map": { type: "t", value: texture },
+                    "fogColor" : { type: "c", value: fog.color },
+                    "fogNear" : { type: "f", value: fog.near },
+                    "fogFar" : { type: "f", value: fog.far },
+                },
+                vertexShader: document.getElementById( 'vs' ).textContent,
+                fragmentShader: document.getElementById( 'fs' ).textContent,
+                depthWrite: false,
+                depthTest: false,
+                transparent: true
+            } );
 
-        for ( var i = 0; i < 30; i++ ) {
+            var plane = new THREE.Mesh( new THREE.PlaneGeometry( 64, 64 ) );
 
-            plane.position.x = getNumberInNormalDistribution(0,1)*200;
-            plane.position.y = getNumberInNormalDistribution(0,1)*200;
-            plane.position.z = getNumberInNormalDistribution(0,1)*100;
-            plane.rotation.z = Math.random() * Math.PI;
-            plane.scale.x = plane.scale.y = Math.random() * 30;
+            for ( var i = 0; i < 10; i++ ) {
 
-            THREE.GeometryUtils.merge( geometry, plane );
+                plane.position.x = getNumberInNormalDistribution(0,1)*200;
+                plane.position.y = getNumberInNormalDistribution(0,1)*200;
+                plane.position.z = getNumberInNormalDistribution(0,1)*100;
+                plane.rotation.z = Math.random() * Math.PI;
+                plane.scale.x = plane.scale.y = 10+Math.random() * 20;
+
+                THREE.GeometryUtils.merge( geometry, plane );//TODO改用新的
+            }
+            
+            cloudMesh = new THREE.Mesh( geometry, material );
+            var cloudPosition = [121.444534,31.171876,300];
+
+            // Add the model to the threebox scenegraph at a specific geographic coordinate
+            threebox.addAtCoordinate(cloudMesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
+            
+            function animate() {
+                requestAnimationFrame( animate );
+                cloudPosition[0]+=0.00001;
+                cloudPosition[1]+=0.00001;
+                threebox.moveToCoordinate(cloudMesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
+            }
+            animate();
+        }else{
+            cloudMesh.visible=false;
         }
-
-        var mesh = new THREE.Mesh( geometry, material );
-        var cloudPosition = [121.444534,31.171876,600];
-
-        // Add the model to the threebox scenegraph at a specific geographic coordinate
-        threebox.addAtCoordinate(mesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
-        
-        function animate() {
-            requestAnimationFrame( animate );
-            cloudPosition[0]+=0.00001;
-            cloudPosition[1]+=0.00001;
-            threebox.moveToCoordinate(mesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
-            //console.log(- Math.random() * Math.random() * 200 - 15);
-        }
-        animate();
     });
 
     function getNumberInNormalDistribution(mean,std_dev){

@@ -12,7 +12,6 @@ var toggleMultiScale = document.getElementById("startMultiScale").addEventListen
         for (var i = 0; i < layerZoom.length-1; i++) { 
             map.setLayerZoomRange("shanghai_L" + (9 - i), layerZoom[i], layerZoom[i + 1]);
             map.setFilter("shanghai_L" + (9 - i), null);
-            //map.setPaintProperty("shanghai_L" + (9 - i), "fill-extrusion-height", ['get', 'height']);
         }
         return;
     }
@@ -22,13 +21,13 @@ var toggleMultiScale = document.getElementById("startMultiScale").addEventListen
     this.innerText = "关闭";
     document.getElementById("multiScaleLayers").style.display = 'block';
     //先决条件检查
-    if (map.getZoom() < layerZoom[4]) { 
-        //map.zoomTo(17);
+    if (map.getZoom() < layerZoom[9-multiScaleMaxLayer]) { 
+        //map.zoomTo(layerZoom[9-multiScaleMaxLayer]);
     }
     if (map.getBearing() !== 0) { 
         map.setBearing(0);
     }
-    //TODO 如果不在上海jumpTo上海
+    //TODO 如果不在上海jumpTo上海 判断边界
     //添加边界线图层
     map.addSource('multiScaleBorder',{
         'type': 'geojson',
@@ -127,10 +126,6 @@ function changeBuildings(){
     map.setLayerZoomRange(layerInner, minZoom, maxZoom);
     map.setLayerZoomRange(layerMiddle, minZoom, maxZoom);
     map.setLayerZoomRange(layerOuter, minZoom, maxZoom);
-    //二三维混搭
-    // map.setPaintProperty(layerInner, "fill-extrusion-height", ['get', 'height']);
-    // map.setPaintProperty(layerMiddle, "fill-extrusion-height", ['get', 'height']);
-    // map.setPaintProperty(layerOuter, "fill-extrusion-height", 0);
 
     //设置显示隐藏
     map.setFilter(layerInner,["all",

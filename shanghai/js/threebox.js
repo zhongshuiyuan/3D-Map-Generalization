@@ -1616,7 +1616,7 @@ function Threebox(map){
     this.map._container.appendChild( this.renderer.domElement );
     this.renderer.domElement.style["position"] = "relative";
     this.renderer.domElement.style["pointer-events"] = "none";
-    this.renderer.domElement.style["z-index"] = 1000;
+    this.renderer.domElement.style["z-index"] = 1;//edit by xy
     //this.renderer.domElement.style["transform"] = "scale(1,-1)";
 
     var _this = this;

@@ -1,9 +1,9 @@
 ///********************初始化地图，展示各个级别的建筑***********************/
 //初始化地图
 var positions = {
-    guangzhou: [113.25871364943879, 23.128997163128673],
+    guangzhou: [113.258713, 23.128997],
     shanghai: [121.444534,31.171876],
-    nanjing: [118.79055594872085, 32.05376236060384],
+    nanjing: [118.790555, 32.053762],
     wuhan:[114.363068,30.532645]
 };
 
@@ -12,8 +12,8 @@ var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/basic-v9',
     center: positions.shanghai,
-    zoom: 16.2,
-    pitch: 50,
+    zoom: 14.5,
+    pitch: 60,
     bearing: 0,
     hash: true,
 });
@@ -22,13 +22,15 @@ var labelLayerId;//噪音在注记下面
 var firstBuildingLayerId;//建筑里最先加进去的一个，轨迹线等在它下面
 var layerZoom = [11, 12, 13, 14, 15, 15.5, 16, 16.5, 17, 22];//建筑九个级别对应的zoom范围，先认为每个城市一样
 
-//添加一些地图一加载时即显示的图层
-map.on('load', function () {    
+map.on('load', function () {
+    //添加一些地图一加载时即显示的图层
     document.getElementById("3dbuildings").click();   
     //document.getElementById("road_noise").click();
+    document.getElementById("cloudControl").click();
     addFlagForCities();
-    addIndoorMap();
+    addIndoorMap();    
 
+    //找到注记和建筑图层id
     var allLayers = map.getStyle().layers;
     for (var i = 0; i < allLayers.length; i++) {
         if (allLayers[i].type === 'symbol' && allLayers[i].layout['text-field']) {
@@ -65,7 +67,7 @@ for (let i = 0; i < buttonsInMenu.length; i++) {
     }    
 }
 
-//实时显示现在的缩放级别和使用的建筑图层
+//实时显示现在的缩放级别和显示的建筑图层
 setInterval("changeInfo()",50);
 function changeInfo(){
     var layerList = document.getElementById('xixi');
@@ -116,14 +118,14 @@ function switchCity(e) {
     }
 }
 
-//添加建筑物以及控制建筑物显示隐藏
+//添加建筑物以及控制建筑物显示隐藏 TODO可能要改成切换到哪个城市再加载哪个城市的数据
 var cbxBuildings = document.getElementById("3dbuildings");
 cbxBuildings.addEventListener('click', function () {
     if (map.getSource("shanghai_L1") == undefined) {//TODO暂时写死了以后再改
-        addBuildingForACity("shanghai");
-        addBuildingForACity("guangzhou");
-        addBuildingForACity("nanjing");
-        addBuildingForACity("wuhan");
+        addBuildingForCity("shanghai");
+        addBuildingForCity("guangzhou");
+        addBuildingForCity("nanjing");
+        addBuildingForCity("wuhan");
     }
     showOrHideBuildings("shanghai", this.checked);
     showOrHideBuildings("guangzhou", this.checked);
@@ -134,16 +136,12 @@ cbxBuildings.addEventListener('click', function () {
 function showOrHideBuildings(cityName,showOrHide) { 
     for (var i = 1; i <= 9; i++) { 
         var xixi = cityName + '_L' + i.toString();
-        if (showOrHide) {
-            map.setLayoutProperty(xixi, 'visibility', 'visible');
-        } else { 
-            map.setLayoutProperty(xixi, 'visibility', 'none');
-        }        
+        map.setLayoutProperty(xixi, 'visibility', showOrHide?'visible':'none');       
     }
 }
 
 //换数据 每个级别的数据都添加进去
-function addBuildingForACity(cityName) { 
+function addBuildingForCity(cityName) { 
     for (var i = 1; i <= 9; i++){
         var xixi=cityName+'_L'+i.toString();
         var minLevel = layerZoom[9 - i];//特定缩放级别对应特定数据
@@ -153,16 +151,16 @@ function addBuildingForACity(cityName) {
     }
 }
 
-//根据图层名称，如L1-L9，构造数据源
+//根据图层名称，构造数据源
 function constructSource(mySource){
     return   {
         'type':'vector',
         'scheme':'tms',
-        'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel%3A'+mySource+'@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
+        'tiles':['http://'+config.hostName+'/geoserver/gwc/service/tms/1.0.0/moreLevel%3A'+mySource+'@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
     };                
 }
 
-//构造图层，添加图层用，根据不同的缩放级别选择不同数据源
+//构造图层，添加图层用，不同的缩放级别范围对应不同数据源
 function constructLayer(myId,mySource,myLayer,myMin,myMax){
     return {
         'id': myId,
@@ -196,6 +194,7 @@ function constructLayer(myId,mySource,myLayer,myMin,myMax){
     };
 }
 
+//添加控件
 map.addControl(new mapboxgl.NavigationControl());
 map.addControl(new mapboxgl.FullscreenControl());
 var language = new MapboxLanguage({
@@ -230,7 +229,6 @@ function addFlagForCities() {
 }
 
 //*****室内地图*******//
-
 //创意城室内地图，添加一个隐藏的图层，鼠标点击就会显示室内地图
 var indoorPopup;
 function addIndoorMap() { 
@@ -241,7 +239,7 @@ function addIndoorMap() {
     map.addLayer({
         id: "indoorMap",
         source: "indoorMap",
-        type: "fill-extrusion",
+        type: "fill-extrusion",//要点在平面的部分才会触发事件，以后的mapbox版本会修复
         paint: {
             "fill-extrusion-opacity": 0.0,
             "fill-extrusion-height": 50
@@ -250,8 +248,6 @@ function addIndoorMap() {
     map.on('click', 'indoorMap', function(e) {
         // Change the cursor style as a UI indicator.
         map.getCanvas().style.cursor = 'pointer';
-        console.log(e);
-        console.log(e.features);
         new mapboxgl.Popup({closeOnClick: false})
         .setLngLat([114.3508887547859,30.52887244911892])
         .setHTML('<div"><iframe src="amap_indoor.html" style="width:500px;height:300px;"></iframe></div>')
@@ -260,7 +256,6 @@ function addIndoorMap() {
 }
 
 //*******土地利用数据*******//
-
 const landuseLayerName = "yangzhou_landuse";
 document.getElementById("landuse").addEventListener('change', function () {
     if (!map.getSource(landuseLayerName)) {
@@ -279,7 +274,7 @@ function addLanduseData() {
     map.addSource(landuseLayerName, {
         'type':'vector',
         'scheme':'tms',
-        'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/general%3Ayangzhou_landuse@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
+        'tiles':['http://'+config.hostName+'/geoserver/gwc/service/tms/1.0.0/general%3Ayangzhou_landuse@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
     });
     map.addLayer({
         "id": landuseLayerName,

@@ -1,42 +1,18 @@
 ///********************控制噪音、光照、云雾等环境信息***********************/
-//添加源和图层并控制图层的显示隐藏
-function controlLayerVisibility(elementId, sourceId, sourceObj, layerId, layerObj, before) { 
-    var toggle=document.getElementById(elementId);
-    toggle.onclick=function(){
-        if (map.getSource(sourceId)===undefined){
-            map.addSource(sourceId, sourceObj);
-        }
-        if (map.getLayer(layerId)===undefined){
-            map.addLayer(layerObj,before);
-        }
-        if (this.checked===true){
-            map.setLayoutProperty(layerId,'visibility','visible');
-        }else{
-            map.setLayoutProperty(layerId,'visibility','none');
-        }
-    };
-}
-
-var noiseToggle = document.getElementById("road_noise");
+var noiseToggle = document.getElementById("noiseLayer");
 noiseToggle.onclick = function () { 
-    if (map.getSource("road_noise_32levels") === undefined) { 
-        addNoise('road_noise_32levels', './data/road32.png', 16, 18);
-        addNoise('road_noise_16levels', './data/road16.png', 14, 16);
-        addNoise('road_noise_8levels', './data/road8.png', 12.5, 14);
-        addNoise('road_noise_4levels', './data/road4.png', 11, 12.5);
+    if (map.getSource("noise_32levels") === undefined) { 
+        addNoise('noise_32levels', './data/road32.png', 16, 18);
+        addNoise('noise_16levels', './data/road16.png', 14, 16);
+        addNoise('noise_8levels', './data/road8.png', 12.5, 14);
+        addNoise('noise_4levels', './data/road4.png', 11, 12.5);
     }
-    if (this.checked===true){
-        map.setLayoutProperty('road_noise_32levels', 'visibility', 'visible');
-        map.setLayoutProperty('road_noise_16levels','visibility','visible');
-        map.setLayoutProperty('road_noise_8levels', 'visibility', 'visible');
-        map.setLayoutProperty('road_noise_4levels','visibility','visible');
-    }else{
-        map.setLayoutProperty('road_noise_32levels', 'visibility', 'none');
-        map.setLayoutProperty('road_noise_16levels','visibility','none');
-        map.setLayoutProperty('road_noise_8levels', 'visibility', 'none');
-        map.setLayoutProperty('road_noise_4levels','visibility','none');
-    }
-}
+    var visibility = this.checked ? 'visible' : 'none';
+    map.setLayoutProperty('noise_32levels', 'visibility', visibility);
+    map.setLayoutProperty('noise_16levels','visibility',visibility);
+    map.setLayoutProperty('noise_8levels', 'visibility', visibility);
+    map.setLayoutProperty('noise_4levels','visibility',visibility);
+};
 
 function addNoise(id,url,minzoom,maxzoom) { 
     map.addSource(id, {
@@ -108,6 +84,24 @@ function addNoise(id,url,minzoom,maxzoom) {
 //         frame = (frame + 1) % soundWaveFrameCount;
 //         map.setPaintProperty('shengbo' + frame, 'raster-opacity', 1);
 //     }, 200);
+// }
+
+// //添加源和图层并控制图层的显示隐藏
+// function controlLayerVisibility(elementId, sourceId, sourceObj, layerId, layerObj, before) { 
+//     var toggle=document.getElementById(elementId);
+//     toggle.onclick=function(){
+//         if (map.getSource(sourceId)===undefined){
+//             map.addSource(sourceId, sourceObj);
+//         }
+//         if (map.getLayer(layerId)===undefined){
+//             map.addLayer(layerObj,before);
+//         }
+//         if (this.checked===true){
+//             map.setLayoutProperty(layerId,'visibility','visible');
+//         }else{
+//             map.setLayoutProperty(layerId,'visibility','none');
+//         }
+//     };
 // }
 
 // //每段路有个噪音值的道路
@@ -233,6 +227,7 @@ function addNoise(id,url,minzoom,maxzoom) {
 //     }
 // }, labelLayerId);
 
+//*********光照**********//
 //光照相关控件加进来并绑定事件
 var canvEl = document.getElementById('canv');
 var widgetWidth = menu.offsetWidth-20;//本来源代码是canv.offsetWidth，由于一开始面板要隐藏，改为使用menu的宽度
@@ -274,3 +269,87 @@ document.getElementById('intensity').addEventListener('input', function(e) {
         }
     });
 }); 
+
+//***********云*************//
+var cloudMesh;
+document.getElementById("cloudControl").addEventListener("change",function(){
+    if (this.checked){
+        if (cloudMesh){
+            cloudMesh.visible=true;
+            return;
+        }
+        // Initialize threebox
+        window.threebox = new Threebox(map);
+        threebox.setupDefaultLights();
+
+        var geometry = new THREE.Geometry();
+
+        var texture = THREE.ImageUtils.loadTexture( './data/cloud10.png');
+        texture.magFilter = THREE.LinearMipMapLinearFilter;
+        texture.minFilter = THREE.LinearMipMapLinearFilter;
+
+        var fog = new THREE.Fog( 0xffffff, - 100, 3000 );
+
+        var material = new THREE.ShaderMaterial( {
+            uniforms: {
+                "map": { type: "t", value: texture },
+                "fogColor" : { type: "c", value: fog.color },
+                "fogNear" : { type: "f", value: fog.near },
+                "fogFar" : { type: "f", value: fog.far },
+            },
+            vertexShader: document.getElementById( 'vs' ).textContent,
+            fragmentShader: document.getElementById( 'fs' ).textContent,
+            depthWrite: false,
+            depthTest: false,
+            transparent: true
+        } );
+
+        var plane = new THREE.Mesh( new THREE.PlaneGeometry( 64, 64 ) );
+
+        for ( var i = 0; i < 10; i++ ) {
+            plane.position.x = getNumberInNormalDistribution(0,1)*200;
+            plane.position.y = getNumberInNormalDistribution(0,1)*200;
+            plane.position.z = getNumberInNormalDistribution(0,1)*100;
+            plane.rotation.z = Math.random() * Math.PI;
+            plane.scale.x = plane.scale.y = 10+Math.random() * 20;
+
+            THREE.GeometryUtils.merge( geometry, plane );//TODO改用新的
+        }
+        
+        cloudMesh = new THREE.Mesh( geometry, material );
+        var cloudPosition = positions.shanghai;
+
+        // Add the model to the threebox scenegraph at a specific geographic coordinate
+        threebox.addAtCoordinate(cloudMesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
+        
+        function animate() {
+            requestAnimationFrame( animate );
+            cloudPosition[0]+=0.00001;
+            cloudPosition[1]+=0.00001;
+            threebox.moveToCoordinate(cloudMesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
+        }
+        animate();
+    }else{
+        cloudMesh.visible=false;
+    }
+});
+
+function getNumberInNormalDistribution(mean,std_dev){
+    return mean+(randomNormalDistribution()*std_dev);
+}
+
+function randomNormalDistribution(){
+    var u=0.0, v=0.0, w=0.0, c=0.0;
+    do{
+        //获得两个（-1,1）的独立随机变量
+        u=Math.random()*2-1.0;
+        v=Math.random()*2-1.0;
+        w=u*u+v*v;
+    }while(w==0.0||w>=1.0)
+    //这里就是 Box-Muller转换
+    c=Math.sqrt((-2*Math.log(w))/w);
+    //返回2个标准正态分布的随机数，封装进一个数组返回
+    //当然，因为这个函数运行较快，也可以扔掉一个
+    //return [u*c,v*c];
+    return u*c;
+}
