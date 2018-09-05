@@ -23,7 +23,6 @@
     <p id="xixi">zoom:xxx;     layer:xxx;</p>
     <input type="checkbox" id="3dbuildings"><label for="3dbuildings">三维建筑</label>
     <input type="checkbox" id="noiseLayer"><label for="noiseLayer">噪音</label>
-    <input type="checkbox" id="cloudControl"><label for="cloudControl">云</label>
     <!-- <input type="checkbox" id="23D"><label for="23D">二三维混搭</label> -->
     <input type="checkbox" id="landuse"><label for="landuse">土地利用数据</label>
     <br />
@@ -32,7 +31,7 @@
     <button id="lightControl" class="openPanel">光照</button>
     <button id="multiScaleControl" class="openPanel">多尺度展示</button>
     <!-- <button id="baselayerControl" class="openPanel">底图切换</button><br/> -->
-    <!-- <button id="cloudControl" class="openPanel">云雾</button> -->
+    <button id="cloudControl" class="openPanel">云</button>
 </div>
 
 <div id='trips' class='trips' >
@@ -103,9 +102,14 @@
     </form>  -->
 </div>
 
-<!-- <div id="cloudControlPanel" class="controlPanel panel">
-    <p>这部分待集成进来</p>
-</div> -->
+<div id="cloudControlPanel" class="controlPanel panel">
+    <input type="checkbox" id="cloudToggle"><label for="cloudControl">云</label>
+    <form id="cloudPara">
+        黑<span id="cloud-color"></span><input type="range" name="color" min="0" max="255" value="255">白<br />
+        小<span id="cloud-size"></span><input type="range" name="size" min="20" max="200" value="100">大<br />
+        <!-- <label>浓度:<br /><span id="cloud-density"></span><input type="range" name="density" min="5" max="15" value="10"></label><br /> -->
+    </form>
+</div>
 
 <!-- 云 -->
 <script id="vs" type="x-shader/x-vertex">

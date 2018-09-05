@@ -227,7 +227,7 @@ function addNoise(id,url,minzoom,maxzoom) {
 //     }
 // }, labelLayerId);
 
-//*********光照**********//
+//*********光照**********// TODO globe控件有点不跟手
 //光照相关控件加进来并绑定事件
 var canvEl = document.getElementById('canv');
 var widgetWidth = menu.offsetWidth-20;//本来源代码是canv.offsetWidth，由于一开始面板要隐藏，改为使用menu的宽度
@@ -272,56 +272,26 @@ document.getElementById('intensity').addEventListener('input', function(e) {
 
 //***********云*************//
 var cloudMesh;
-document.getElementById("cloudControl").addEventListener("change",function(){
+var cloudPosition = [121.444534,31.171876,300];
+var normalDistribution=[],randomDistribution=[];//固定的正态分布随机数和完全随机数
+for (var i=0;i<1000;i++){
+    normalDistribution[i]=getNumberInNormalDistribution(0,1);
+    randomDistribution[i]=Math.random();
+}
+
+document.getElementById("cloudToggle").addEventListener("change",function(){
     if (this.checked){
         if (cloudMesh){
             cloudMesh.visible=true;
             return;
         }
+
         // Initialize threebox
         window.threebox = new Threebox(map);
         threebox.setupDefaultLights();
 
-        var geometry = new THREE.Geometry();
+        updateCloud();
 
-        var texture = THREE.ImageUtils.loadTexture( './data/cloud10.png');
-        texture.magFilter = THREE.LinearMipMapLinearFilter;
-        texture.minFilter = THREE.LinearMipMapLinearFilter;
-
-        var fog = new THREE.Fog( 0xffffff, - 100, 3000 );
-
-        var material = new THREE.ShaderMaterial( {
-            uniforms: {
-                "map": { type: "t", value: texture },
-                "fogColor" : { type: "c", value: fog.color },
-                "fogNear" : { type: "f", value: fog.near },
-                "fogFar" : { type: "f", value: fog.far },
-            },
-            vertexShader: document.getElementById( 'vs' ).textContent,
-            fragmentShader: document.getElementById( 'fs' ).textContent,
-            depthWrite: false,
-            depthTest: false,
-            transparent: true
-        } );
-
-        var plane = new THREE.Mesh( new THREE.PlaneGeometry( 64, 64 ) );
-
-        for ( var i = 0; i < 10; i++ ) {
-            plane.position.x = getNumberInNormalDistribution(0,1)*200;
-            plane.position.y = getNumberInNormalDistribution(0,1)*200;
-            plane.position.z = getNumberInNormalDistribution(0,1)*100;
-            plane.rotation.z = Math.random() * Math.PI;
-            plane.scale.x = plane.scale.y = 10+Math.random() * 20;
-
-            THREE.GeometryUtils.merge( geometry, plane );//TODO改用新的
-        }
-        
-        cloudMesh = new THREE.Mesh( geometry, material );
-        var cloudPosition = positions.shanghai;
-
-        // Add the model to the threebox scenegraph at a specific geographic coordinate
-        threebox.addAtCoordinate(cloudMesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
-        
         function animate() {
             requestAnimationFrame( animate );
             cloudPosition[0]+=0.00001;
@@ -333,6 +303,65 @@ document.getElementById("cloudControl").addEventListener("change",function(){
         cloudMesh.visible=false;
     }
 });
+
+document.getElementById("cloudPara").addEventListener('change', updateCloud);
+
+function updateCloud() { 
+    var inputs = document.getElementById("cloudPara").getElementsByTagName('input');
+    var para = {};
+    for (var i = 0; i < inputs.length; i++) { 
+        var input = inputs[i];
+        if (input.name === 'color') { 
+            var r = parseInt(input.value).toString(16);
+            if (r.length === 1) r = 0 + r;
+            var rgb = "0x" + r + r + r;
+            para[input.name] = Number(rgb);
+            continue;
+        }
+        para[input.name] = input.value;
+    }
+    console.log(para);
+    threebox.world.remove(threebox.world.children[1]);
+    addCloud(para);
+}
+
+function addCloud(objPara){
+    var geometry = new THREE.Geometry();
+
+    var texture = THREE.ImageUtils.loadTexture( './data/cloud10.png');
+    texture.magFilter = THREE.LinearMipMapLinearFilter;
+    texture.minFilter = THREE.LinearMipMapLinearFilter;
+
+    var fog = new THREE.Fog( objPara.color, - 100, 3000 );
+
+    var material = new THREE.ShaderMaterial( {
+        uniforms: {
+            "map": { type: "t", value: texture },
+            "fogColor" : { type: "c", value: fog.color },
+            "fogNear" : { type: "f", value: fog.near },
+            "fogFar" : { type: "f", value: fog.far },
+        },
+        vertexShader: document.getElementById( 'vs' ).textContent,
+        fragmentShader: document.getElementById( 'fs' ).textContent,
+        depthWrite: false,
+        depthTest: false,
+        transparent: true
+    } );
+
+    var plane = new THREE.Mesh( new THREE.PlaneGeometry( 64, 64 ) );
+    for ( var i = 0; i < 10; i++ ) {
+        plane.position.x = normalDistribution[i] * 200;
+        plane.position.y = normalDistribution[2*i] * 200;
+        plane.position.z = normalDistribution[3*i] * 200;
+        plane.rotation.z = randomDistribution[i] * Math.PI;
+        plane.scale.x = plane.scale.y = randomDistribution[2*i] * objPara.size;
+
+        THREE.GeometryUtils.merge( geometry, plane );
+    }
+
+    cloudMesh = new THREE.Mesh( geometry, material );
+    threebox.addAtCoordinate(cloudMesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
+}
 
 function getNumberInNormalDistribution(mean,std_dev){
     return mean+(randomNormalDistribution()*std_dev);

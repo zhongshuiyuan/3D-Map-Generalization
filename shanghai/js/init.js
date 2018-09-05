@@ -12,7 +12,7 @@ var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/basic-v9',
     center: positions.shanghai,
-    zoom: 14.5,
+    zoom: 12.5,
     pitch: 60,
     bearing: 0,
     hash: true,
@@ -26,7 +26,7 @@ map.on('load', function () {
     //添加一些地图一加载时即显示的图层
     document.getElementById("3dbuildings").click();   
     //document.getElementById("road_noise").click();
-    document.getElementById("cloudControl").click();
+    document.getElementById("cloudToggle").click();
     addFlagForCities();
     addIndoorMap();    
 
