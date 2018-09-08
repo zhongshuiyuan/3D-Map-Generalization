@@ -235,7 +235,7 @@ var g = Globe()
     .color('rgba(255,255,255,0.8)')
     .lightColor('#86cfd2')
     .width(widgetWidth)
-    .on('change', function(rotation) {
+    .on('change', function (rotation) {
         map.setLight({
             position: rotation,
             'position-transition': {
@@ -271,6 +271,10 @@ document.getElementById('intensity').addEventListener('input', function(e) {
 }); 
 
 //***********云*************//
+map.on("load", function() {
+    document.getElementById("cloudToggle").click();
+});
+
 var cloudMesh;
 var cloudPosition = [121.444534,31.171876,300];
 var normalDistribution=[],randomDistribution=[];//固定的正态分布随机数和完全随机数
@@ -278,6 +282,8 @@ for (var i=0;i<1000;i++){
     normalDistribution[i]=getNumberInNormalDistribution(0,1);
     randomDistribution[i]=Math.random();
 }
+var speedFactor=document.getElementById("cloud-speed").value/10000;
+var cloudDirection=document.getElementById("cloud-direction").value;
 
 document.getElementById("cloudToggle").addEventListener("change",function(){
     if (this.checked){
@@ -294,8 +300,8 @@ document.getElementById("cloudToggle").addEventListener("change",function(){
 
         function animate() {
             requestAnimationFrame( animate );
-            cloudPosition[0]+=0.00001;
-            cloudPosition[1]+=0.00001;
+            cloudPosition[0]+=speedFactor*Math.cos(2 * Math.PI / 360 * cloudDirection);
+            cloudPosition[1]+=speedFactor*Math.sin(2 * Math.PI / 360 * cloudDirection);
             threebox.moveToCoordinate(cloudMesh, cloudPosition, {scaleToLatitude: true, preScale: 2});
         }
         animate();
@@ -304,8 +310,42 @@ document.getElementById("cloudToggle").addEventListener("change",function(){
     }
 });
 
-document.getElementById("cloudPara").addEventListener('change', updateCloud);
+document.getElementById("cloud-speed").addEventListener("change",function(e){
+    speedFactor=e.target.value/10000;
+});
 
+document.getElementById("cloud-direction").addEventListener("change",function(){
+    cloudDirection=this.value;
+});
+
+document.getElementById("cloud-position-control").addEventListener("click",function(e){
+    const coordinateOffset=0.01;//每次移动多少
+    const heightOffset=100;
+    switch (e.target.id){
+        case "cloud-north":
+            cloudPosition[1]+=coordinateOffset;
+            break;
+        case "cloud-west":
+            cloudPosition[0]-=coordinateOffset;
+            break;
+        case "cloud-east":
+            cloudPosition[0]+=coordinateOffset;
+            break;
+        case "cloud-south":
+            cloudPosition[1]-=coordinateOffset;
+            break;
+        case "cloud-up":
+            cloudPosition[2]+=heightOffset;
+            break;
+        case "cloud-down":
+            cloudPosition[2]-=heightOffset;
+            break;
+        default:
+            break;
+    }
+});
+
+document.getElementById("cloudPara").addEventListener('change', updateCloud);
 function updateCloud() { 
     var inputs = document.getElementById("cloudPara").getElementsByTagName('input');
     var para = {};
@@ -328,7 +368,7 @@ function updateCloud() {
 function addCloud(objPara){
     var geometry = new THREE.Geometry();
 
-    var texture = THREE.ImageUtils.loadTexture( './data/cloud10.png');
+    var texture = THREE.ImageUtils.loadTexture('./data/cloud10.png');
     texture.magFilter = THREE.LinearMipMapLinearFilter;
     texture.minFilter = THREE.LinearMipMapLinearFilter;
 

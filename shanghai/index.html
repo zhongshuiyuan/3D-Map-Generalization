@@ -105,10 +105,18 @@
 <div id="cloudControlPanel" class="controlPanel panel">
     <input type="checkbox" id="cloudToggle"><label for="cloudControl">云</label>
     <form id="cloudPara">
-        黑<span id="cloud-color"></span><input type="range" name="color" min="0" max="255" value="255">白<br />
-        小<span id="cloud-size"></span><input type="range" name="size" min="20" max="200" value="100">大<br />
+        黑<input type="range" name="color" min="0" max="255" value="255">白<br />
+        小<input type="range" name="size" min="20" max="200" value="100">大<br />
         <!-- <label>浓度:<br /><span id="cloud-density"></span><input type="range" name="density" min="5" max="15" value="10"></label><br /> -->
     </form>
+    <div id="cloudPosition">
+        慢<input id="cloud-speed" type="range" name="speed" min="0" max="10" value="1">快<br />
+        方向&nbsp;<input type="number" id="cloud-direction" min="0" max="360" value="45" style="width: 40px;"><br />
+        <div id="cloud-position-control">
+            <button id="cloud-north" style="margin-left: 20px;">↑</button><button id="cloud-up" style="margin-left: 20px;">↑</button><br />
+            <button id="cloud-west">←</button><button id="cloud-south">↓</button><button id="cloud-east">→</button><button id="cloud-down">↓</button>
+        </div>        
+    </div>
 </div>
 
 <!-- 云 -->

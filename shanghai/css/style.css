@@ -75,3 +75,9 @@ body {
     margin: 0;
     cursor: ew-resize;
 }
+/* 云 */
+#cloudPosition button{
+    width:20px;
+    height: 20px;
+    padding: 0;
+}

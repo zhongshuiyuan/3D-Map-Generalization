@@ -26,7 +26,7 @@ map.on('load', function () {
     //添加一些地图一加载时即显示的图层
     document.getElementById("3dbuildings").click();   
     //document.getElementById("road_noise").click();
-    document.getElementById("cloudToggle").click();
+    // document.getElementById("cloudToggle").click();//放到云的代码哪里click了
     addFlagForCities();
     addIndoorMap();    
 
