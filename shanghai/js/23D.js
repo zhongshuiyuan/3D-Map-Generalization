@@ -1,6 +1,6 @@
-var example23DLayerName = 'shanghai_L1_geojson';//只对上海L1做了二三维混搭，矢量瓦片setfeaturestate时找不到id
+//只对上海L1做了二三维混搭，矢量瓦片setfeaturestate时找不到id
+var example23DLayerName = 'shanghai_L1_geojson';
 var example23DData = './data/shanghai_L1_clip.geojson';
-var example23DDataAfter;//对原始geojson做处理加上id，方便setfeaturestate
 var bottomLine, verticalDistance;
 
 document.getElementById("23D").addEventListener("change", function () {
@@ -8,31 +8,19 @@ document.getElementById("23D").addEventListener("change", function () {
         if (document.getElementById("3dbuildings").checked == true) { 
             document.getElementById("3dbuildings").click();//关闭瓦片的建筑，显示geojson的建筑
         }
+
         map.jumpTo({
             center: [121.380146, 31.181931],//目前只是clip了一个片区来做
             zoom: 17,
             pitch:60
         });
         
-        $.ajaxSettings.async = false; //同步
-        $.getJSON(example23DData, function (data) {
-            var i = 1;
-            data.features.forEach(function (item, index) {
-                item.id = i;
-                i++;
-            });
-            example23DDataAfter = data;
-        });
-        
         map.addSource(example23DLayerName, {
             'type': 'geojson',
-            'data': example23DDataAfter
+            'data': example23DData,
+            'generateId': true//用于setfeaturestate
         });
-        // map.addSource(example23DLayerName, {
-        //     'type':'vector',
-        //     'scheme':'tms',
-        //     'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel%3Ashanghai_L1@EPSG%3A900913@geojson']
-        // })
+        
         map.addLayer({
             'id': example23DLayerName,
             'type': 'fill-extrusion',
@@ -53,7 +41,6 @@ document.getElementById("23D").addEventListener("change", function () {
 
         map.on('move', changeHeight);
     } else { 
-        //flag23D = false;
         map.removeLayer(example23DLayerName);
         map.removeSource(example23DLayerName);        
         map.off('move', changeHeight);
@@ -77,7 +64,7 @@ map.on('sourcedata', callback23DData);
 
 //鼠标移动时把近的放高远的放低接近二维
 function changeHeight() { 
-    var features = map.queryRenderedFeatures({ layers: [example23DLayerName] });
+    var features = map.queryRenderedFeatures({layers: [example23DLayerName]});
     updateBottomLine();
     features.forEach((item) => {
         var scale = compute23DScale(item);

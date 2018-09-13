@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>多尺度展示-沿当前道路</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.48.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.48.0/mapbox-gl.css' rel='stylesheet' />
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@5/turf.min.js"></script>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<style>
+    #menu {
+        position: absolute;
+        background: #fff;
+        padding: 10px;
+        font-family: 'Open Sans', sans-serif;
+    }
+</style>
+
+<div id='map'></div>
+<div id='menu'>
+    <button id="multiScale">多尺度展示</button>
+</div>
+<script>
+    function constructSource(mySource){
+        return   {
+            'type':'vector',
+                'scheme':'tms',
+                'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel%3A'+mySource+'@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
+        };
+    }
+    function constructLayer(myId,mySource,myLayer,myMin,myMax){
+        return {
+            'id': myId,
+            'source': mySource,
+            'source-layer': myLayer,
+            'type': 'fill-extrusion',
+            'minzoom': myMin,
+            'maxzoom': myMax,
+            'paint': {
+                'fill-extrusion-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'height'],
+                    0, 'rgb(255,255,191)',
+                    75, 'rgb(253,174,97)',
+                    150, "rgb(215,25,28)",
+                ],
+                'fill-extrusion-height': ['get', 'height'],
+                'fill-extrusion-opacity': .8,
+            }
+        }
+    }
+    
+    //初始化地图
+    mapboxgl.accessToken = 'pk.eyJ1IjoicGFuY2FrZSIsImEiOiJjajgxc2hqemUwMjNpMndtaWU1cHRhcDJvIn0.AkD8g3KIKm865IhQjGuP1A';
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/basic-v9',
+        center: [121.444534,31.171876],
+        zoom: 18,
+        pitch: 60,
+        bearing: 0,
+        //hash: true,
+    });
+    //换数据
+    map.on('load', function() {
+        var xixi='shanghai_L1';
+        var minLevel=17,maxLevel=22;
+        map.addSource(xixi,constructSource(xixi));
+        map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
+
+        var xixi='shanghai_L3';
+        var minLevel=13,maxLevel=17;
+        map.addSource(xixi,constructSource(xixi));
+        map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
+
+        // var xixi='shanghai_L5';
+        // var minLevel=1,maxLevel=13;
+        // map.addSource(xixi,constructSource(xixi));
+        // map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
+
+        // for (var i = 1; i <= 3; i++){
+        //     var xixi='shanghai_L'+i.toString();
+        //     var minLevel=1,maxLevel=22;
+        //     map.addSource(xixi,constructSource(xixi));
+        //     map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
+        // }
+    });
+    map.addControl(new mapboxgl.NavigationControl());
+    map.addControl(new mapboxgl.FullscreenControl());
+
+    //*********多尺度展示-函数关系 分割线*********//
+    var closeDis=200;//web墨卡托 米
+    var farDis=400;
+
+    document.getElementById("multiScale").addEventListener("click",changeBuilding);
+    map.on('move',changeBuilding);
+
+    function changeBuilding(){
+        map.setLayerZoomRange("shanghai_L1",1,22);
+        map.setLayerZoomRange("shanghai_L3",1,22);
+
+        var viewPoint=screenToProject(1/2,1);
+        var featuresInner = map.querySourceFeatures("shanghai_L1",{sourceLayer:"shanghai_L1"});
+        var filteredIdInner = ["in", "id"];
+        featuresInner.forEach((feature)=>{
+            var buildingPoint=[feature.properties.x_join,feature.properties.y_join];
+            var distance=Math.sqrt(Math.pow(buildingPoint[0]-viewPoint[0],2)+Math.pow(buildingPoint[1]-viewPoint[1],2));
+            if (distance<closeDis){
+                filteredIdInner.push(feature.properties.id);
+            }
+        });
+        //console.log(filteredIdInner.length);
+        map.setFilter("shanghai_L1", filteredIdInner);
+
+        var featuresMiddle=map.querySourceFeatures("shanghai_L3",{sourceLayer:"shanghai_L3"});
+        var filteredIdMiddle = ["in", "id"];
+        featuresMiddle.forEach((feature)=>{
+            var buildingPoint=[feature.properties.x,feature.properties.y];
+            var distance=Math.sqrt(Math.pow(buildingPoint[0]-viewPoint[0],2)+Math.pow(buildingPoint[1]-viewPoint[1],2));
+            if (distance>closeDis){
+                filteredIdMiddle.push(feature.properties.id);
+            }
+        });
+        //console.log(filteredIdMiddle.length);
+        map.setFilter("shanghai_L3", filteredIdMiddle);
+    }    
+
+    //根据在屏幕中的位置来计算对应点的投影坐标
+    function screenToProject(divisionX,divisionY){
+        var mapSize=map._containerDimensions();
+        var screenX=mapSize[0]*divisionX;
+        var screenY=mapSize[1]*divisionY;
+        var geoObj=map.unproject([screenX,screenY]);
+        var geoArr=[geoObj.lng,geoObj.lat];
+        var projected = turf.toMercator(turf.point(geoArr)).geometry.coordinates;
+        return projected;
+    }
+</script>
+
+</body>
+</html>

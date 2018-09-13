@@ -360,7 +360,7 @@ function updateCloud() {
         }
         para[input.name] = input.value;
     }
-    console.log(para);
+    //console.log(para);
     threebox.world.remove(threebox.world.children[1]);
     addCloud(para);
 }

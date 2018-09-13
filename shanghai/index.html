@@ -4,8 +4,8 @@
     <meta charset='utf-8' />
     <title>上海-调参综合</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.48.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.48.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.css' rel='stylesheet' />
     <script type="text/javascript" src="https://www.mapbox.com/bites/00295/globe.js"></script>
     <script type="text/javascript" src="https://www.mapbox.com/bites/00295/colorpicker.js"></script>
     <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
@@ -23,7 +23,7 @@
     <p id="xixi">zoom:xxx;     layer:xxx;</p>
     <input type="checkbox" id="3dbuildings"><label for="3dbuildings">三维建筑</label>
     <input type="checkbox" id="noiseLayer"><label for="noiseLayer">噪音</label>
-    <!-- <input type="checkbox" id="23D"><label for="23D">二三维混搭</label> -->
+    <input type="checkbox" id="23D"><label for="23D">二三维混搭</label>
     <input type="checkbox" id="landuse"><label for="landuse">土地利用数据</label>
     <br />
     <button id="load-trips">加载轨迹</button>
@@ -113,8 +113,8 @@
         慢<input id="cloud-speed" type="range" name="speed" min="0" max="10" value="1">快<br />
         方向&nbsp;<input type="number" id="cloud-direction" min="0" max="360" value="45" style="width: 40px;"><br />
         <div id="cloud-position-control">
-            <button id="cloud-north" style="margin-left: 20px;">△</button><button id="cloud-up" style="margin-left: 20px;">△</button><br />
-            <button id="cloud-west">◁</button><button id="cloud-south">▽</button><button id="cloud-east">▷</button><button id="cloud-down">▽</button>
+            <button id="cloud-north" style="margin-left: 20px;">▲</button><button id="cloud-up" style="margin-left: 20px;">▲</button><br />
+            <button id="cloud-west">◀</button><button id="cloud-south">▼</button><button id="cloud-east">▶</button><button id="cloud-down">▼</button>
         </div>        
     </div>
 </div>
@@ -152,6 +152,6 @@
 <script src="./js/environment.js"></script>
 <script src="./js/animate.js"></script>
 <script src="./js/multiScale.js"></script>
-<!-- <script src="./js/23D.js"></script> -->
+<script src="./js/23D.js"></script>
 </body>
 </html>
