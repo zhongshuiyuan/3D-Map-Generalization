@@ -1,7 +1,6 @@
 //只对上海L1做了二三维混搭，矢量瓦片setfeaturestate时找不到id
-var example23DLayerName = 'shanghai_L1_geojson';
-var example23DData = './data/shanghai_L1_clip.geojson';
-var bottomLine, verticalDistance;
+var _23DLayerName = 'shanghai_L1_geojson';
+var _23DData = './data/shanghai_L1_clip.geojson';
 
 document.getElementById("23D").addEventListener("change", function () {
     if (this.checked===true) {
@@ -15,16 +14,16 @@ document.getElementById("23D").addEventListener("change", function () {
             pitch:60
         });
         
-        map.addSource(example23DLayerName, {
+        map.addSource(_23DLayerName, {
             'type': 'geojson',
-            'data': example23DData,
+            'data': _23DData,
             'generateId': true//用于setfeaturestate
         });
         
         map.addLayer({
-            'id': example23DLayerName,
+            'id': _23DLayerName,
             'type': 'fill-extrusion',
-            'source': example23DLayerName,
+            'source': _23DLayerName,
             'paint': {
                 'fill-extrusion-color': [
                     'interpolate',
@@ -39,75 +38,100 @@ document.getElementById("23D").addEventListener("change", function () {
             }
         });
 
+        map.addLayer({
+            'id': 'opacityTransitionLayer',
+            'type': 'fill',
+            'source': _23DLayerName,
+            'paint': {
+                'fill-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'height'],
+                    0, 'rgb(255,255,191)',
+                    75, 'rgb(253,174,97)',
+                    150, "rgb(215,25,28)",
+                ],
+            }
+        })
+
         map.on('move', changeHeight);
-    } else { 
-        map.removeLayer(example23DLayerName);
-        map.removeSource(example23DLayerName);        
+    } else {
+        map.removeLayer("opacityTransitionLayer");
+        map.removeLayer(_23DLayerName);
+        map.removeSource(_23DLayerName);        
         map.off('move', changeHeight);
+        _23DDataFirstLoaded = true;
     }
 });
 
-var isFirst=true;
+var _23DDataFirstLoaded=true;
 function callback23DData(e) {        
-    if (isFirst && e.sourceId === example23DLayerName && e.isSourceLoaded === true) {
-        var features = map.queryRenderedFeatures({ layers: [example23DLayerName] });
+    if (_23DDataFirstLoaded && e.sourceId === _23DLayerName && e.isSourceLoaded === true) {
+        var features = map.queryRenderedFeatures({ layers: [_23DLayerName] });
         if (!features.length) {
             return;
         }
         console.log('23d source loaded!');
-        isFirst=false;
+        _23DDataFirstLoaded=false;
         changeHeight();
-        map.setPaintProperty(example23DLayerName, "fill-extrusion-height", ["feature-state", "height"]);
+        map.setPaintProperty(_23DLayerName, "fill-extrusion-height", ["feature-state", "height"]);
+        map.setPaintProperty("opacityTransitionLayer", "fill-opacity", ["feature-state", "opacity"]);
     }
 }
 map.on('sourcedata', callback23DData);
 
 //鼠标移动时把近的放高远的放低接近二维
 function changeHeight() { 
-    var features = map.queryRenderedFeatures({layers: [example23DLayerName]});
-    updateBottomLine();
-    features.forEach((item) => {
-        var scale = compute23DScale(item);
-        var height = item.properties.height * scale;//稍微放大点突出差异
-        map.setFeatureState({ source: example23DLayerName, id: item.id }, { height: height });
+    var features = map.querySourceFeatures(_23DLayerName);
+    var _3dFilteredId = ["in", "OBJECTID"];
+    //var _2dFilteredId = ["in", "OBJECTID"];
+    features.forEach((feature) => {
+        var {heightScale,opacityScale} = compute23DScale(feature);
+        if (heightScale > 0) { 
+            var height = feature.properties.height * heightScale;
+            map.setFeatureState({ source: _23DLayerName, id: feature.id }, { height: height });
+            _3dFilteredId.push(feature.properties.OBJECTID);
+        }
+        // if (opacityScale > 0) { 
+        //     map.setFeatureState({ source: _23DLayerName, id: feature.id }, { opacity: opacityScale });
+        //     _2dFilteredId.push(feature.properties.OBJECTID);
+        // }
+        map.setFeatureState({ source: _23DLayerName, id: feature.id }, { opacity: opacityScale });
     });
-}
-
-//更新底线的位置，方便计算建筑的远近
-function updateBottomLine() { 
-    var mapSize=map._containerDimensions();
-    var screenX=mapSize[0];
-    var screenY = mapSize[1];
-    var topLeft = map.unproject([0, 0]);
-    var bottomLeft = map.unproject([0, screenY]);
-    var bottomRight = map.unproject([screenX, screenY]);
-    var from = turf.point([topLeft.lng, topLeft.lat]);
-    var to = turf.point([bottomLeft.lng, bottomLeft.lat]);
-    
-    verticalDistance = turf.distance(from, to);    
-    bottomLine = turf.lineString([[bottomLeft.lng, bottomLeft.lat], [bottomRight.lng, bottomRight.lat]])
+    map.setFilter(_23DLayerName, _3dFilteredId);
+    //map.setFilter("opacityTransitionLayer", _2dFilteredId);
 }
 
 //计算缩放比例
 function compute23DScale(feature) {
     var polygon = turf.polygon(feature.geometry.coordinates);
     var centroid = turf.centroid(polygon).geometry.coordinates;
-    //centroid = [feature.properties.POINT_X, feature.properties.POINT_Y];//提前处理好，属性增加个位置更方便
-    var nearestPoint = turf.nearestPointOnLine(bottomLine, centroid).geometry.coordinates;
-    var from = turf.point(nearestPoint);
-    var to=turf.point(centroid)
-    var distance = turf.distance(from, to);
-    var scale = 1- distance / verticalDistance;
-    return heightTransition(scale);//拉大差异
+    //centroid = [feature.properties.POINT_X, feature.properties.POINT_Y];//用提前处理好的
+    var screenPoint = map.project(centroid);
+    var scale = 1 - screenPoint.y / map._containerDimensions()[1];
+    var heightScale = heightTransition(scale);
+    var opacityScale = opacityTransition(scale);
+    return {
+        heightScale: heightScale,
+        opacityScale:opacityScale
+    };
 }
 
 //近的三维，真实高度，远的二维，高度为0，中间过渡
 function heightTransition(x) {
-    if (x >= 0.7) {
-        return 1;
-    } else if (x <= 0.3) {
+    if (x >= 0.6) {
         return 0;
+    } else if (x <= 0.5) {
+        return 1;
     } else { 
-        return 2.5 * x - 0.75;
+        return -10 * x + 6;
+    }
+}
+
+function opacityTransition(x) { 
+    if (x > 0.6 && x < 0.7) {
+        return -10 * x + 7;
+    } else { 
+        return 0;
     }
 }
