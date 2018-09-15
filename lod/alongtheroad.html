@@ -117,7 +117,7 @@
                 filteredIdInner.push(feature.properties.id);
             }
         });
-        //console.log(filteredIdInner.length);
+        console.log(filteredIdInner.length);
         map.setFilter("shanghai_L1", filteredIdInner);
 
         var featuresMiddle=map.querySourceFeatures("shanghai_L3",{sourceLayer:"shanghai_L3"});
@@ -129,7 +129,7 @@
                 filteredIdMiddle.push(feature.properties.id);
             }
         });
-        //console.log(filteredIdMiddle.length);
+        console.log(filteredIdMiddle.length);
         map.setFilter("shanghai_L3", filteredIdMiddle);
     }    
 

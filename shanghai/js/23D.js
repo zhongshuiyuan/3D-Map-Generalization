@@ -1,4 +1,4 @@
-//只对上海L1做了二三维混搭，矢量瓦片setfeaturestate时找不到id
+//矢量瓦片setfeaturestate时找不到id,暂时用geojson做，只对上海L1做了二三维混搭
 var _23DLayerName = 'shanghai_L1_geojson';
 var _23DData = './data/shanghai_L1_clip.geojson';
 
@@ -38,6 +38,7 @@ document.getElementById("23D").addEventListener("change", function () {
             }
         });
 
+        //由于fill-extrusion不能data driven styling opactiy，用fill来做
         map.addLayer({
             'id': 'opacityTransitionLayer',
             'type': 'fill',
@@ -80,11 +81,10 @@ function callback23DData(e) {
 }
 map.on('sourcedata', callback23DData);
 
-//鼠标移动时把近的放高远的放低接近二维
+//鼠标移动时调整过渡地带的建筑物的高度、透明度 TODO用瓦片做时可以改成根据坐标filter来提高速度
 function changeHeight() { 
     var features = map.querySourceFeatures(_23DLayerName);
     var _3dFilteredId = ["in", "OBJECTID"];
-    //var _2dFilteredId = ["in", "OBJECTID"];
     features.forEach((feature) => {
         var {heightScale,opacityScale} = compute23DScale(feature);
         if (heightScale > 0) { 
@@ -92,14 +92,10 @@ function changeHeight() {
             map.setFeatureState({ source: _23DLayerName, id: feature.id }, { height: height });
             _3dFilteredId.push(feature.properties.OBJECTID);
         }
-        // if (opacityScale > 0) { 
-        //     map.setFeatureState({ source: _23DLayerName, id: feature.id }, { opacity: opacityScale });
-        //     _2dFilteredId.push(feature.properties.OBJECTID);
-        // }
         map.setFeatureState({ source: _23DLayerName, id: feature.id }, { opacity: opacityScale });
     });
+    console.log(_3dFilteredId);
     map.setFilter(_23DLayerName, _3dFilteredId);
-    //map.setFilter("opacityTransitionLayer", _2dFilteredId);
 }
 
 //计算缩放比例
@@ -117,7 +113,7 @@ function compute23DScale(feature) {
     };
 }
 
-//近的三维，真实高度，远的二维，高度为0，中间过渡
+//近的三维，真实高度，过渡地带高度逐渐降低接近0
 function heightTransition(x) {
     if (x >= 0.6) {
         return 0;
@@ -128,6 +124,7 @@ function heightTransition(x) {
     }
 }
 
+//透明度从1过渡到0 TODO应该动态获取3d建筑的透明度，从这个透明度过渡到0
 function opacityTransition(x) { 
     if (x > 0.6 && x < 0.7) {
         return -10 * x + 7;
