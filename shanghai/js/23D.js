@@ -1,48 +1,65 @@
-//矢量瓦片setfeaturestate时找不到id,暂时用geojson做，只对上海L1做了二三维混搭
-var _23DLayerName = 'shanghai_L1_geojson';
-var _23DData = './data/shanghai_L1_clip.geojson';
-
+//TODO暂未考虑在二三维混搭的模式下缩放时换图层
+var _23DLayerName;
 document.getElementById("23D").addEventListener("change", function () {
     if (this.checked===true) {
-        if (document.getElementById("3dbuildings").checked == true) { 
-            document.getElementById("3dbuildings").click();//关闭瓦片的建筑，显示geojson的建筑
-        }
-
-        map.jumpTo({
-            center: [121.380146, 31.181931],//目前只是clip了一个片区来做
-            zoom: 17,
-            pitch:60
-        });
+        //map.zoomTo(17.1);放得越大二三维混搭效果越明显     
+        // var levelNow = getLevelNow();
+        // var cityNow = "shanghai"//TODO getCityNow();
+        // _23DLayerName = cityNow + "_L" + levelNow;
         
-        map.addSource(_23DLayerName, {
-            'type': 'geojson',
-            'data': _23DData,
-            'generateId': true//用于setfeaturestate
-        });
-        
-        map.addLayer({
-            'id': _23DLayerName,
-            'type': 'fill-extrusion',
-            'source': _23DLayerName,
-            'paint': {
-                'fill-extrusion-color': [
-                    'interpolate',
-                    ['linear'],
-                    ['get', 'height'],
-                    0, 'rgb(255,255,191)',
-                    75, 'rgb(253,174,97)',
-                    150, "rgb(215,25,28)",
-                ],
-                'fill-extrusion-height': ["get", "height"],
-                'fill-extrusion-opacity': 0.8//该属性针对图层，不能控制到每个要素，否则可以做个渐变
-            }
-        });
+        //由于fill-extrusion-opactiy不能data driven styling，用fill来做透明渐变的过渡 TODO放在对应的3d建筑下面
+        // map.addLayer({
+        //     'id': 'opacityTransitionLayer',
+        //     'type': 'fill',
+        //     'source': _23DLayerName,
+        //     'source-layer':_23DLayerName,
+        //     //TODO去获取对应的fill-extrusion图层并动态设置
+        //     'paint': {
+        //         'fill-color': [
+        //             'interpolate',
+        //             ['linear'],
+        //             ['get', 'height'],
+        //             0, 'rgb(255,255,191)',
+        //             75, 'rgb(253,174,97)',
+        //             150, "rgb(215,25,28)",
+        //         ],
+        //     }
+        // })
 
-        //由于fill-extrusion不能data driven styling opactiy，用fill来做
+        // var features = map.queryRenderedFeatures({ layers: [_23DLayerName] });
+        // if (!features.length) {
+        //     alert("当前位置没有显示建筑物，无法实现二三维混搭");
+        //     return;
+        // }
+
+        changeHeight();
+        map.setPaintProperty(_23DLayerName, "fill-extrusion-height", ["feature-state", "height"]);
+        map.setPaintProperty("opacityTransitionLayer", "fill-opacity", ["feature-state", "opacity"]);
+
+        map.on('move', changeHeight);
+    } else {
+        map.removeLayer("opacityTransitionLayer");        
+        map.off('move', changeHeight);
+        _23DDataFirstLoaded = true;
+    }
+});
+
+//鼠标移动时调整过渡地带的建筑物的高度、透明度 可以改成根据坐标filter来提高速度
+function changeHeight() {
+    var levelNow = getLevelNow();
+    var cityNow = "shanghai"//TODO getCityNow();
+    _23DLayerName = cityNow + "_L" + levelNow;
+
+    if (map.getLayer("opacityTransitionLayer").source !== _23DLayerName) {//缩放时跨越级别了，要重新加 
+        map.removeLayer("opacityTransitionLayer");
+    }
+    if (!map.getLayer("opacityTransitionLayer")) { 
         map.addLayer({
             'id': 'opacityTransitionLayer',
             'type': 'fill',
             'source': _23DLayerName,
+            'source-layer':_23DLayerName,
+            //TODO去获取对应的fill-extrusion图层并动态设置
             'paint': {
                 'fill-color': [
                     'interpolate',
@@ -54,48 +71,37 @@ document.getElementById("23D").addEventListener("change", function () {
                 ],
             }
         })
+    }    
 
-        map.on('move', changeHeight);
-    } else {
-        map.removeLayer("opacityTransitionLayer");
-        map.removeLayer(_23DLayerName);
-        map.removeSource(_23DLayerName);        
-        map.off('move', changeHeight);
-        _23DDataFirstLoaded = true;
-    }
-});
-
-var _23DDataFirstLoaded=true;
-function callback23DData(e) {        
-    if (_23DDataFirstLoaded && e.sourceId === _23DLayerName && e.isSourceLoaded === true) {
-        var features = map.queryRenderedFeatures({ layers: [_23DLayerName] });
-        if (!features.length) {
-            return;
-        }
-        console.log('23d source loaded!');
-        _23DDataFirstLoaded=false;
-        changeHeight();
-        map.setPaintProperty(_23DLayerName, "fill-extrusion-height", ["feature-state", "height"]);
-        map.setPaintProperty("opacityTransitionLayer", "fill-opacity", ["feature-state", "opacity"]);
-    }
-}
-map.on('sourcedata', callback23DData);
-
-//鼠标移动时调整过渡地带的建筑物的高度、透明度 TODO用瓦片做时可以改成根据坐标filter来提高速度
-function changeHeight() { 
-    var features = map.querySourceFeatures(_23DLayerName);
-    var _3dFilteredId = ["in", "OBJECTID"];
-    features.forEach((feature) => {
-        var {heightScale,opacityScale} = compute23DScale(feature);
+    var features = map.querySourceFeatures(_23DLayerName, {sourceLayer:_23DLayerName});
+    var _3dFilteredId = ["in", "id"];
+    var _2dFilteredId = ["in", "id"];
+    var uniqueFeatures=getUniqueFeatures(features,'id');
+    
+    //修改geoserver后，仍有少部分要素缺少feature.id
+    uniqueFeatures.forEach((feature) => { 
+        if (isNaN(feature.id)) { 
+            feature.id=feature.properties.id+1;
+            console.log(feature);
+        }           
+    });
+    
+    //修改featurestate，高度和透明度，隐藏远的建筑
+    uniqueFeatures.forEach((feature) => {
+        var { heightScale, opacityScale } = compute23DScale(feature);
         if (heightScale > 0) { 
             var height = feature.properties.height * heightScale;
-            map.setFeatureState({ source: _23DLayerName, id: feature.id }, { height: height });
-            _3dFilteredId.push(feature.properties.OBJECTID);
+            map.setFeatureState({ source: _23DLayerName, sourceLayer:_23DLayerName, id: feature.id }, { height: height });
+            _3dFilteredId.push(feature.properties.id);
         }
-        map.setFeatureState({ source: _23DLayerName, id: feature.id }, { opacity: opacityScale });
+        map.setFeatureState({ source: _23DLayerName, sourceLayer:_23DLayerName, id: feature.id }, { opacity: opacityScale });
+        if (opacityScale > 0) { 
+            _2dFilteredId.push(feature.properties.id);
+        }
     });
-    console.log(_3dFilteredId);
+    //console.log(_3dFilteredId);
     map.setFilter(_23DLayerName, _3dFilteredId);
+    map.setFilter("opacityTransitionLayer", _2dFilteredId);
 }
 
 //计算缩放比例
@@ -132,3 +138,21 @@ function opacityTransition(x) {
         return 0;
     }
 }
+
+function getUniqueFeatures(array, comparatorProperty) {
+    var existingFeatureKeys = {};
+    var uniqueFeatures = array.filter(function(el) {
+        if (existingFeatureKeys[el.properties[comparatorProperty]]) {
+            return false;
+        } else {
+            existingFeatureKeys[el.properties[comparatorProperty]] = true;
+            return true;
+        }
+    });
+    return uniqueFeatures;
+}
+
+map.on('click', 'opacityTransitionLayer', function(e) {
+    var features = map.queryRenderedFeatures(e.point);
+    console.log(features[0]);
+});
