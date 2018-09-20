@@ -24,11 +24,13 @@
     position: absolute;;
     list-style: none;
     padding: 0;
-    left: 0px;
+    /* edit by xy 为了不跟menu重叠而放到右边 */
+    right: 0px;
 }
 
 .floorsUI{
-    top:100px;
+	/*edit by xy 为了不跟mapbox的控件冲突*/
+    top:150px;
 }
 
 .testButton{

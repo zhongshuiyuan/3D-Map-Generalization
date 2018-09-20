@@ -25,6 +25,11 @@ IndoorMap3d = function(mapdiv){
     this.mall = null;
     this.is3d = true;
 
+    //add by xy
+    this.getControl = function () { 
+        return _controls;
+    }
+
     this.init = function(){
 
         // perspective scene for normal 3d rendering
@@ -90,8 +95,10 @@ IndoorMap3d = function(mapdiv){
             _this.renderer.setClearColor(_theme.background);
             if(_curFloorId == 0){
                 _this.showAllFloors();
+                _this.adjustCamera();
             }else{
                 _this.showFloor(_curFloorId);
+                _this.adjustCamera();
             }
 
         });
@@ -114,11 +121,11 @@ IndoorMap3d = function(mapdiv){
 
     //reset the camera to default configuration
     this.setDefaultView = function () {
-
-        var camAngle = _this.mall.FrontAngle + Math.PI/2;
+        //edit by xy 跟mapbox的bearing相对应
+        var camAngle = 2 * Math.PI / 360 * 0;//_this.mall.FrontAngle + Math.PI/2;
         var camDir = [Math.cos(camAngle), Math.sin(camAngle)];
         var camLen = 500;
-        var tiltAngle = 75.0 * Math.PI/180.0;
+        var tiltAngle = 30 * Math.PI/180.0;//edit by xy 跟mapbox的pitch对应
         _this.camera.position.set(camDir[1]*camLen, Math.sin(tiltAngle) * camLen, camDir[0]*camLen);//TODO: adjust the position automatically
         _this.camera.lookAt(_scene.position);
 
@@ -156,7 +163,7 @@ IndoorMap3d = function(mapdiv){
             return;
         }
         _scene.mall.showFloor(floorid);
-        _this.adjustCamera();
+        //_this.adjustCamera();edit by xy
         if(_showPubPoints) {
             createPubPointSprites(floorid);
         }

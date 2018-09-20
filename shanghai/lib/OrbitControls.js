@@ -62,6 +62,7 @@ THREE.OrbitControls = function ( object, domElement ) {
     var phiDelta = 0;
     var thetaDelta = 0;
     var scale = 1;
+    var zoom = 1;//add by xy
 
     var lastPosition = new THREE.Vector3();
 
@@ -72,7 +73,12 @@ THREE.OrbitControls = function ( object, domElement ) {
 
     var changeEvent = { type: 'change' };
     var startEvent = { type: 'start'};
-    var endEvent = { type: 'end'};
+    var endEvent = { type: 'end' };
+    
+    //add by xy
+    this.getZoom = function () { 
+        return zoom;
+    }
 
     this.reset = function (){
         rotateStart = new THREE.Vector2();
@@ -155,7 +161,7 @@ THREE.OrbitControls = function ( object, domElement ) {
         }
 
         scale /= zoomScale;
-
+        zoom /= zoomScale;//add by xy
     };
 
     this.zoomOut = function ( zoomScale ) {
@@ -167,7 +173,7 @@ THREE.OrbitControls = function ( object, domElement ) {
         }
 
         scale *= zoomScale;
-
+        zoom *= zoomScale;//add by xy
     };
 
     this.pan = function ( distance ) {
