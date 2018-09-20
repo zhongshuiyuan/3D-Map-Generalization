@@ -138,12 +138,12 @@ function getUniqueFeatures(array, comparatorProperty) {
 }
 
 //测试，待删除
-map.on('click', 'opacityTransitionLayer', function(e) {
-    var features = map.queryRenderedFeatures(e.point);
-    console.log(features[0]);
-});
+// map.on('click', 'opacityTransitionLayer', function(e) {
+//     var features = map.queryRenderedFeatures(e.point);
+//     console.log(features[0]);
+// });
 
-map.on('click', 'shanghai_L3', function(e) {
-    var features = map.queryRenderedFeatures(e.point);
-    console.log(features[0]);
-});
+// map.on('click', 'shanghai_L3', function(e) {
+//     var features = map.queryRenderedFeatures(e.point);
+//     console.log(features[0]);
+// });

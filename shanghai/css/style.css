@@ -9,6 +9,12 @@ body {
     bottom:0; 
     width:100%; 
 }
+#indoor3d { 
+    position:absolute; 
+    top:0; 
+    bottom:0; 
+    width:100%; 
+}
 .panel {
     background-color: #404040;
     color: #fff;
@@ -21,7 +27,7 @@ body {
     padding: 10px;
     font-family: 'Open Sans', sans-serif;
     /* 避免被云遮挡   */
-    z-index: 2;
+    z-index: 3;
 }  
 #menu p,button {
     margin: 2px;

@@ -191,11 +191,17 @@ function toWGS84(arr){
 
 //根据在屏幕中的位置来计算对应点的投影坐标
 function screenToProject(divisionX,divisionY){
+    var geoArr=screenToGeography(divisionX, divisionY);
+    var projectArr = turf.toMercator(turf.point(geoArr)).geometry.coordinates;
+    return projectArr;
+}
+
+//根据在屏幕中的位置来计算对应点的地理坐标
+function screenToGeography(divisionX,divisionY){
     var mapSize=map._containerDimensions();
     var screenX=mapSize[0]*divisionX;
     var screenY=mapSize[1]*divisionY;
     var geoObj=map.unproject([screenX,screenY]);
     var geoArr=[geoObj.lng,geoObj.lat];
-    var projected = turf.toMercator(turf.point(geoArr)).geometry.coordinates;
-    return projected;
+    return geoArr;
 }

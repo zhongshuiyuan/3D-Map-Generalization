@@ -25,10 +25,8 @@ var layerZoom = [11, 12, 13, 14, 15, 15.5, 16, 16.5, 17, 22];//建筑九个级�
 map.on('load', function () {
     //添加一些地图一加载时即显示的图层
     document.getElementById("3dbuildings").click();   
-    //document.getElementById("road_noise").click();
-    // document.getElementById("cloudToggle").click();//放到云的代码哪里click了
     addFlagForCities();
-    addIndoorMap();    
+    addIndoorMap();
 
     //找到注记和建筑图层id
     var allLayers = map.getStyle().layers;
@@ -229,31 +227,77 @@ function addFlagForCities() {
 }
 
 //*****室内地图*******//
-//创意城室内地图，添加一个隐藏的图层，鼠标点击就会显示室内地图
-var indoorPopup;
-function addIndoorMap() { 
-    map.addSource("indoorMap", {
-        type: "geojson",
-        data: "./data/chuangyicheng.geojson"
+//飞到做了室内地图的建筑
+document.getElementById("indoorMap").addEventListener("click", function () {
+    map.flyTo({
+        center: [116.43009, 39.970392],
+        zoom: 18.21
     });
+});
+
+//添加要展示室内地图的建筑,一个要素
+function addIndoorMap() {
+    //暂时做了北京一栋楼的室内地图
+    map.addSource('indoor3d', {
+        'type': 'geojson',
+        'data': './data/AegeanSeaShoppingCenter.geojson'
+    });
+
     map.addLayer({
-        id: "indoorMap",
-        source: "indoorMap",
-        type: "fill-extrusion",//要点在平面的部分才会触发事件，以后的mapbox版本会修复
-        paint: {
-            "fill-extrusion-opacity": 0.0,
-            "fill-extrusion-height": 50
+        'id': 'indoor3d',
+        'type': 'fill-extrusion',
+        'source': 'indoor3d',
+        'paint': {
+            'fill-extrusion-color': 'rgb(255,255,191)',
+            'fill-extrusion-height': 10,
+            'fill-extrusion-opacity': 0.8
         }
-    });
-    map.on('click', 'indoorMap', function(e) {
-        // Change the cursor style as a UI indicator.
-        map.getCanvas().style.cursor = 'pointer';
-        new mapboxgl.Popup({closeOnClick: false})
-        .setLngLat([114.3508887547859,30.52887244911892])
-        .setHTML('<div"><iframe src="amap_indoor.html" style="width:500px;height:300px;"></iframe></div>')
-        .addTo(map);       
-    });
+    })
 }
+
+//初始化室内地图
+var indoorParams = {
+    mapDiv:"indoor3d",
+    dim:"3d"
+};
+var indoor3dMap = IndoorMap(indoorParams);
+indoor3dMap.load('data/testMapData.json', function(){
+    indoor3dMap.showAreaNames(true).setSelectable(true).showFloor(1);
+    var ul = IndoorMap.getUI(indoor3dMap);
+    document.getElementById("indoor3d").appendChild(ul);
+});
+
+//进入室内地图
+var indoorZoomThreshold = 19.23;
+map.on('zoom', function () {
+    if (map.getZoom() < indoorZoomThreshold) return;
+    if (!isIndoorBuildingInView()) return;
+    document.getElementById("indoor3d").style.zIndex = "2";//1:云 3：菜单
+});
+
+//判断展示室内地图的建筑是否在当前视线中间范围内
+function isIndoorBuildingInView() {
+    var features = map.querySourceFeatures("indoor3d");
+    if (!features) { 
+        return false;//建筑完全不在视线范围内
+    }
+    //判断建筑质心是否在视线中间范围内
+    var centralSize = 3 / 8;
+    var nw = screenToGeography(1/2-centralSize, 1/2-centralSize);
+    var ne = screenToGeography(1/2+centralSize, 1/2-centralSize);
+    var sw = screenToGeography(1/2-centralSize, 1/2+centralSize);
+    var se = screenToGeography(1/2+centralSize, 1/2+centralSize);
+    var feature = features[0];
+    var polygon = turf.polygon(feature.geometry.coordinates);
+    var centroid = turf.centroid(polygon);
+    var centralRegion = turf.polygon([[nw, ne, se, sw, nw]]);
+    var result = turf.booleanContains(centralRegion, centroid);
+    console.log(result);
+    return result;
+}
+
+//从室内地图出来
+
 
 //*******土地利用数据*******//
 const landuseLayerName = "yangzhou_landuse";
