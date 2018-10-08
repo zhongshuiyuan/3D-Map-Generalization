@@ -26,7 +26,7 @@ map.on('load', function () {
     //添加一些地图一加载时即显示的图层
     document.getElementById("3dbuildings").click();   
     addFlagForCities();
-    addIndoorMap();
+    // addIndoorMap();
 
     //找到注记和建筑图层id
     var allLayers = map.getStyle().layers;
@@ -228,154 +228,114 @@ function addFlagForCities() {
 
 //*****室内地图*******//
 //飞到做了室内地图的建筑
-document.getElementById("indoorMap").addEventListener("click", function () {
-    map.flyTo({
-        center: [116.43017133325338, 39.969832438342664],
-        zoom: 17.8
-    });
-});
-
-//添加要展示室内地图的建筑,一个要素
-function addIndoorMap() {
-    //暂时做了北京一栋楼的室内地图
-    map.addSource('indoor3d', {
-        'type': 'geojson',
-        'data': './data/AegeanSeaShoppingCenter.geojson'
-    });
-
-    map.addLayer({
-        'id': 'indoor3d',
-        'type': 'fill-extrusion',
-        'source': 'indoor3d',
-        'paint': {
-            'fill-extrusion-color': 'rgb(255,255,191)',
-            'fill-extrusion-height': 10,
-            'fill-extrusion-opacity': 0.8
-        }
-    })
-}
-
-//初始化室内地图
-var indoorParams = {
-    mapDiv:"indoor3d",
-    dim:"3d"
-};
-var indoor3dMap = IndoorMap(indoorParams);
-indoor3dMap.load('data/testMapData.json', function(){
-    indoor3dMap.showAreaNames(true).setSelectable(true).showFloor(1);
-    var ul = IndoorMap.getUI(indoor3dMap);
-    document.getElementById("indoor3d").appendChild(ul);
-});
-
-//进入室内地图
-var indoorZoomThreshold = 18;
-// map.on('zoom', function () {
-//     if (map.getZoom() < indoorZoomThreshold) return;
-//     if (!isIndoorBuildingInView()) return;
-//     document.getElementById("indoor3d").style.zIndex = "2";//1:云 3：菜单
+// document.getElementById("indoorMap").addEventListener("click", function () {
+//     map.flyTo({
+//         center: [116.43017133325338, 39.969832438342664],
+//         zoom: 17
+//     });
 // });
 
-//判断展示室内地图的建筑是否在当前视线中间范围内
-function isIndoorBuildingInView() {
-    var features = map.querySourceFeatures("indoor3d");
-    if (!features) { 
-        return false;//建筑完全不在视线范围内
-    }
-    //判断建筑质心是否在视线中间范围内
-    var centralSize = 3 / 8;
-    var nw = screenToGeography(1/2-centralSize, 1/2-centralSize);
-    var ne = screenToGeography(1/2+centralSize, 1/2-centralSize);
-    var sw = screenToGeography(1/2-centralSize, 1/2+centralSize);
-    var se = screenToGeography(1/2+centralSize, 1/2+centralSize);
-    var feature = features[0];
-    var polygon = turf.polygon(feature.geometry.coordinates);
-    var centroid = turf.centroid(polygon);
-    var centralRegion = turf.polygon([[nw, ne, se, sw, nw]]);
-    var result = turf.booleanContains(centralRegion, centroid);
-    return result;
-}
+// //添加要展示室内地图的建筑,一个要素
+// function addIndoorMap() {
+//     //暂时做了北京一栋楼的室内地图
+//     map.addSource('indoor3d', {
+//         'type': 'geojson',
+//         'data': './data/AegeanSeaShoppingCenter.geojson'
+//     });
 
-//从室内地图出来
-//setInterval("exitIndoor()", 50);
-function exitIndoor() { 
-    if (document.getElementById("indoor3d").style.zIndex === "0") { 
-        return;//本来就没显示室内地图，不用退出
-    }
-    var zoom=indoor3dMap.getControl().getZoom();
-    if (zoom > 1) {//室内地图缩小到一定程度后退出 
-        document.getElementById("indoor3d").style.zIndex = "0";
-    } 
-}
+//     map.addLayer({
+//         'id': 'indoor3d',
+//         'type': 'fill-extrusion',
+//         'source': 'indoor3d',
+//         'paint': {
+//             'fill-extrusion-color': 'rgb(255,255,191)',
+//             'fill-extrusion-height': 10,
+//             'fill-extrusion-opacity': 0.8
+//         }
+//     })
+// }
 
-class Queue {
+// //初始化室内地图
+// var indoorParams = {
+//     mapDiv:"indoor3d",
+//     dim:"3d"
+// };
+// var indoor3dMap = IndoorMap(indoorParams);
+// indoor3dMap.load('data/testMapData.json', function(){
+//     indoor3dMap.showAreaNames(true).setSelectable(true).showFloor(1);
+//     var ul = IndoorMap.getUI(indoor3dMap);
+//     document.getElementById("indoor3d").appendChild(ul);
+// });
 
-    constructor() {
-      // 定义一个数组来保存队列里面的元素
-      this.items = []
-    }
-  
-    // 在队列尾部添加一个或者多个元素
-    enqueue (element) {
-        this.items.push(element)
-    }
-    // 移除队列顶部的元素，并返回被移除的元素
-    dequeue() { 
-        return this.items.shift()
-    }
-    // 清空队列
-    remove() {
-        this.items = []
-    }
-    // 返回队列顶部的元素，不对队列本身做修改
-    front() { 
-        return this.items[0]
-    }
-    // 判断队列是否为空
-    isEmpty() { 
-        return this.items.length === 0
-    }
-    // 返回队列里面元素的个数
-    length() { 
-        return this.item.length
-    }
-      
-    print(){
-        this.items.forEach((item, index) => {
-            console.log(`${index+1}:${item}`)
-        })
-    }
-}
+// //进入室内地图的阈值
+// var indoorZoomThreshold = 17.5;
+// //判断展示室内地图的建筑是否在当前视线中间范围内
+// function isIndoorBuildingInView() {
+//     var features = map.querySourceFeatures("indoor3d");
+//     if (!features) { 
+//         return false;//建筑完全不在视线范围内
+//     }
+//     //判断建筑质心是否在视线中间范围内
+//     var centralSize = 3 / 8;
+//     var nw = screenToGeography(1/2-centralSize, 1/2-centralSize);
+//     var ne = screenToGeography(1/2+centralSize, 1/2-centralSize);
+//     var sw = screenToGeography(1/2-centralSize, 1/2+centralSize);
+//     var se = screenToGeography(1/2+centralSize, 1/2+centralSize);
+//     var feature = features[0];
+//     var polygon = turf.polygon(feature.geometry.coordinates);
+//     var centroid = turf.centroid(polygon);
+//     var centralRegion = turf.polygon([[nw, ne, se, sw, nw]]);
+//     var result = turf.booleanContains(centralRegion, centroid);
+//     return result;
+// }
 
-setInterval("determineIndoorOutdoor()", 50);
-var outdoorZoom = new Queue();
-outdoorZoom.enqueue(map.getZoom());
-outdoorZoom.enqueue(map.getZoom());
-var indoorZoom = new Queue();
-indoorZoom.enqueue(indoor3dMap.getControl().getZoom());
-indoorZoom.enqueue(indoor3dMap.getControl().getZoom());
-function determineIndoorOutdoor() { 
-    if (document.getElementById("indoor3d").style.zIndex !== "2") {
-        //现在显示的是室外地图
-        var nowOutdoorZoom = map.getZoom();
-        var lastOutdoorZoom = outdoorZoom.dequeue();
-        outdoorZoom.enqueue(nowOutdoorZoom);
-        //不管现在室外的zoom是多少，只要是在缩小的过程中，都不会变到室内去
-        if (nowOutdoorZoom <= lastOutdoorZoom) return;
-        if (nowOutdoorZoom < indoorZoomThreshold) return;
-        if (!isIndoorBuildingInView()) return;
-        document.getElementById("indoor3d").style.zIndex = "2";//1:云 3：菜
-    } else { 
-        //现在显示的是室内地图
-        var nowIndoorZoom = indoor3dMap.getControl().getZoom();
-        var lastIndoorZoom = indoorZoom.dequeue();
-        indoorZoom.enqueue(nowIndoorZoom);
-        //除非室内地图是在缩小的过程中，否则不会变回室外去，即使地图还没放到阈值要求的那么大
-        if (nowIndoorZoom <= lastIndoorZoom) return;
-        if (nowIndoorZoom > 1) {//室内地图缩小到一定程度后退出 
-            document.getElementById("indoor3d").style.zIndex = "0";
-        } 
-    }
-}
+// //队列，用于判断地图是在放大的过程中还是在缩小的过程中
+// class Queue {
+//     constructor() {
+//       // 定义一个数组来保存队列里面的元素
+//       this.items = []
+//     }  
+//     // 在队列尾部添加一个或者多个元素
+//     enqueue (element) {
+//         this.items.push(element)
+//     }
+//     // 移除队列顶部的元素，并返回被移除的元素
+//     dequeue() { 
+//         return this.items.shift()
+//     }
+// }
+
+// var outdoorZoom = new Queue();
+// outdoorZoom.enqueue(map.getZoom());
+// outdoorZoom.enqueue(map.getZoom());
+// var indoorZoom = new Queue();
+// indoorZoom.enqueue(indoor3dMap.getControl().getZoom());
+// indoorZoom.enqueue(indoor3dMap.getControl().getZoom());
+
+// setInterval("determineIndoorOutdoor()", 50);
+// function determineIndoorOutdoor() { 
+//     if (document.getElementById("indoor3d").style.zIndex !== "3") {
+//         //现在显示的是室外地图
+//         var nowOutdoorZoom = map.getZoom();
+//         var lastOutdoorZoom = outdoorZoom.dequeue();
+//         outdoorZoom.enqueue(nowOutdoorZoom);
+//         //不管现在室外的zoom是多少，只要是在缩小的过程中，都不会变到室内去
+//         if (nowOutdoorZoom <= lastOutdoorZoom) return;
+//         if (nowOutdoorZoom < indoorZoomThreshold) return;
+//         if (!isIndoorBuildingInView()) return;
+//         document.getElementById("indoor3d").style.zIndex = "3";//切换到室内 1:云 4：菜单
+//     } else { 
+//         //现在显示的是室内地图
+//         var nowIndoorZoom = indoor3dMap.getControl().getZoom();
+//         var lastIndoorZoom = indoorZoom.dequeue();
+//         indoorZoom.enqueue(nowIndoorZoom);
+//         //除非室内地图是在缩小的过程中，否则不会变回室外去，即使地图还没放到阈值要求的那么大
+//         if (nowIndoorZoom <= lastIndoorZoom) return;
+//         if (nowIndoorZoom > 1) {//室内地图缩小到一定程度后退出 
+//             document.getElementById("indoor3d").style.zIndex = "0";
+//         } 
+//     }
+// }
 
 
 

@@ -27,7 +27,7 @@ body {
     padding: 10px;
     font-family: 'Open Sans', sans-serif;
     /* 避免被云遮挡   */
-    z-index: 3;
+    z-index: 4;
 }  
 #menu p,button {
     margin: 2px;
