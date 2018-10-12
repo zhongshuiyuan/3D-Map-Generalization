@@ -22,12 +22,12 @@
 
     var params = {
         mapDiv:"indoor3d",
-        dim:"3d"
+        dim:"2d"
     }
     var map = IndoorMap(params);
     map.load('data/testMapData.json', function(){
         //map.setTheme(testTheme);
-        map.showAreaNames(true).setSelectable(true).showFloor(1);
+        map.showAreaNames(true).setSelectable(true);
         var ul = IndoorMap.getUI(map);
         document.body.appendChild(ul);
     });
@@ -35,12 +35,13 @@
 </script>
 <!-- buttons just for test-->
 <div class="testButton">
-<!-- <ul >
-    <li onclick="map.zoomIn()">+</li>
-    <li onclick="map.zoomOut()">-</li>
-    <li onclick="map.setTopView()">Top View</li>
+<ul >
+    <li onclick="map.zoomIn(1.2)">+</li>
+    <li onclick="map.zoomOut(0.8)">-</li>
+    <!--<li onclick="map.setTopView()">Top View</li>-->
     <li onclick="map.setDefaultView()">Default View</li>
-</ul> -->
+
+</ul>
 </div>
 </body>
 </html>

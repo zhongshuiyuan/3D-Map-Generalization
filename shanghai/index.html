@@ -13,23 +13,12 @@
     <script type="text/javascript" src="https://www.mapbox.com/bites/00295/globe.js"></script>
     <script type="text/javascript" src="https://www.mapbox.com/bites/00295/colorpicker.js"></script>
     <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
-    <!-- 室内地图 -->
-    <script src="./lib/threebox.js"></script><!-- 云 -->
-    <script src="./lib/Detector.js"></script>
-    <script src="./lib/OrbitControls.js"></script>
-    <script src="./lib/IndoorMap.js"></script>
-    <script src="./lib/Projector.js"></script>
-    <script src="./lib/stats.min.js"></script>
-    <script src="./lib/IndoorMap2d.js"></script>
-    <script src="./lib/IndoorMap3d.js"></script>
-    <script src="./lib/Theme.js"></script>
-    <link href="./lib/indoor3D.css" rel="stylesheet">
     <!-- 其他 -->
+    <script src="./lib/threebox.js"></script><!-- 云 -->    
     <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>    
     <link href="./css/style.css" rel="stylesheet" />    
 </head>
 <body>
-<!-- <div id="indoor3d"></div> -->
 <div id='map'></div>
 
 <div id='menu' class="panel">
@@ -40,7 +29,7 @@
     <input type="checkbox" id="landuse"><label for="landuse">土地利用数据</label>
     <br />
     <button id="load-trips">加载轨迹</button>
-    <!-- <button id="indoorMap">室内地图</button> -->
+    <button id="indoorMap">室内地图</button>
     <button id="cityControl" class="openPanel">城市切换</button>
     <button id="lightControl" class="openPanel">光照</button>
     <button id="multiScaleControl" class="openPanel">多尺度展示</button>

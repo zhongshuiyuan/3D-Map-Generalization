@@ -960,17 +960,16 @@ IndoorMap.getUI = function(indoorMap){
     _uiRoot = document.createElement('ul');
     _uiRoot.className = 'floorsUI';
 
-    //edit by xy 不要显示全部楼层
-    // if(_indoorMap.is3d) {
-    //     var li = document.createElement('li');
-    //     var text = document.createTextNode('All');
+    if(_indoorMap.is3d) {
+        var li = document.createElement('li');
+        var text = document.createTextNode('All');
 
-    //     li.appendChild(text);
-    //     _uiRoot.appendChild(li);
-    //     li.onclick = function () {
-    //         _indoorMap.showAllFloors();
-    //     }
-    // }
+        li.appendChild(text);
+        _uiRoot.appendChild(li);
+        li.onclick = function () {
+            _indoorMap.showAllFloors();
+        }
+    }
 
     var floors = _indoorMap.mall.jsonData.data.Floors;
     for(var i = 0; i < floors.length; i++){

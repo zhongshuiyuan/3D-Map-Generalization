@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0 maximum-scale=1.0 user-scalable=no">
+    <title></title>
+    <script src="./lib/three.min.js"></script>
+    <script src="./lib/Detector.js"></script>
+    <script src="./lib/OrbitControls.js"></script>
+    <script src="./lib/IndoorMap.js"></script>
+    <script src="./lib/Projector.js"></script>
+    <script src="./lib/stats.min.js"></script>
+    <script src="./lib/IndoorMap2d.js"></script>
+    <script src="./lib/IndoorMap3d.js"></script>
+    <script src="./lib/Theme.js"></script>
+    <link href="./lib/indoor3D.css" rel="stylesheet">
+</head>
+<body style="width: 800px; height: 500px;">
+<div id="indoor3d" style="top:0px; left: 0px; position: absolute; width: 100%; height: 100%;"></div>
+<script>
+    //初始化室内地图
+    var indoorParams = {
+        mapDiv:"indoor3d",
+        dim:"3d"
+    };
+    var indoor3dMap = IndoorMap(indoorParams);
+    indoor3dMap.load('data/testMapData.json', function(){
+        indoor3dMap.showAreaNames(true).setSelectable(true).showFloor(1);
+        var ul = IndoorMap.getUI(indoor3dMap);
+        document.getElementById("indoor3d").appendChild(ul);
+    });
+</script>
+</body>
+</html>

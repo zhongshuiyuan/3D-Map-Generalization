@@ -24,8 +24,7 @@
     position: absolute;;
     list-style: none;
     padding: 0;
-    /* edit by xy 为了不跟menu重叠而放到右边 */
-    right: 0px;
+    left: 0px;
 }
 
 .floorsUI{
