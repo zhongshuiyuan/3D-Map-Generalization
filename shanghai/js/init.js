@@ -228,19 +228,33 @@ function addFlagForCities() {
 
 //*****室内地图*******//
 //飞到做了室内地图的建筑
-document.getElementById("indoorMap").addEventListener("click", function () {
+//TODO 改为事件委托 减少重复代码
+document.getElementById("indoor-beijing1").addEventListener("click", function () {
     map.flyTo({
         center: [116.43017133325338, 39.969832438342664],
         zoom: 17
     });
-});
+})
+
+document.getElementById("indoor-beijing2").addEventListener("click", function () { 
+    map.flyTo({
+        center: [116.4426832807996, 39.91803042443385],
+        zoom: 17
+    });
+})
+
+document.getElementById("indoor-shenzhen").addEventListener("click", function () { 
+    map.flyTo({
+        center: [113.87588093008259, 22.585140324141918],
+        zoom: 17
+    });
+})
 
 //添加要展示室内地图的建筑,一个要素
 function addIndoorLayer() {
-    //暂时做了北京一栋楼的室内地图
     map.addSource('indoor3d', {
         'type': 'geojson',
-        'data': './data/AegeanSeaShoppingCenter.geojson'
+        'data': './data/AegeanSeaShoppingCenter.geojson'//该数据包含三栋楼，属性id分别是123
     });
 
     map.addLayer({
@@ -255,10 +269,11 @@ function addIndoorLayer() {
     })
 }
 
-map.on("click", "indoor3d", function (e) { 
+map.on("click", "indoor3d", function (e) {
+    var buildingId=e.features[0].properties.Id;
     new mapboxgl.Popup()
         .setLngLat(e.lngLat)
-        .setHTML("<iframe src='indoor.html' style='width: 800px; height: 500px;'></iframe>")
+        .setHTML("<iframe src='../indoor3D/index.html?buildingID="+buildingId+"' style='width: 800px; height: 500px;'></iframe>")
         .addTo(map);
 })
 

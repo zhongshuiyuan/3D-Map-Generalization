@@ -147,3 +147,21 @@ function getUniqueFeatures(array, comparatorProperty) {
 //     var features = map.queryRenderedFeatures(e.point);
 //     console.log(features[0]);
 // });
+
+//****************导航animation用于展示二三维混搭、多尺度混搭的效果*******************//
+// document.getElementById("direction-control").addEventListener('change', function () {
+//     if (this.checked) {
+//         var directions=new MapboxDirections({
+//             accessToken: mapboxgl.accessToken
+//         });
+//         map.addControl(directions, 'top-right');
+//     } else { 
+//         map.removeControl(directions);
+//     }
+// });
+
+//坐标拾取器 仅供测试用
+// map.on('click',function(e){
+// 	var point=[e.lngLat.lng,e.lngLat.lat];
+// 	console.log(point);	
+// });

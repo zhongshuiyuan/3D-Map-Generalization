@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <title>noise test1</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.49.0/mapbox-gl.css' rel='stylesheet' />
+  <style>
+    body { margin:0; padding:0; }
+    #map { position:absolute; top:0; bottom:0; width:100%; }
+  </style>
+</head>
+<body>
+<div id='map'>
+</div>
+<script>
+  mapboxgl.accessToken = 'pk.eyJ1IjoieWpjeSIsImEiOiJjaml6ZmNyNXUwMDhhM2twcW5rNXVxN2g5In0.EWnWf_DMm7xBmQ3gAdeJyQ';
+  var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v9',
+    center: [121.444534,31.171876],
+    zoom: 13
+  });
+  var layerZoom = [10,14,18,21,22];
+
+  map.on('load', function() {
+    for (var i = 1; i <= 4; i++) {
+      var xixi = 'shzy' + i.toString();
+      var minLevel = layerZoom[4 - i];//特定缩放级别对应特定数
+      var maxLevel = layerZoom[5 - i];
+      map.addSource(xixi, noiseSource(xixi));
+      map.addLayer(noiseLayer(xixi, xixi, xixi, minLevel, maxLevel));
+    }
+  });
+
+  function noiseSource(mySource) {
+    return {
+      'type': 'vector',
+      'scheme': 'tms',
+      'tiles': ['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel%3A' + mySource + '@EPSG%3A900913@pbf/{z}/{x}/{y}.pbf']
+    };
+  }
+  
+  function noiseLayer(myId, mySource, myLayer, myMin, myMax) {
+    return {
+      'id': myId,
+      'source': mySource,
+      'source-layer': myLayer,
+      'type': 'fill-extrusion',
+      'minzoom': myMin,
+      'maxzoom': myMax,
+      'paint': {
+        'fill-extrusion-color': 'rgba(200, 100, 240, 0.4)',
+        //    [
+        //   'interpolate',
+        //  ['linear'],
+        //    ['get', 'height'],
+        //    0, 'rgb(255,255,191)',
+        //    20, 'rgb(253,174,97)',
+        //    40, "rgb(215,25,28)",
+        // ],
+        'fill-extrusion-opacity': 0.8
+      }
+    }
+  }
+
+  // 光标转点
+  //     map.on('mouseenter', 'shzy', function () {
+  //       map.getCanvas().style.cursor = 'pointer';
+  //     });
+  //     map.on('mouseleave', 'shzy', function () {
+  //       map.getCanvas().style.cursor = '';
+  //     });
+  //     //点击弹出显示噪音情况
+  //     map.on('click', noiseSource(), function (e) {
+  //       new mapboxgl.Popup()
+  //         .setLngLat(e.lngLat)
+  //         .setHTML(e.features[0].properties.name)
+  //         .addTo(map);
+  //     });
+
+</script>
+</body>
+</html>

@@ -16,7 +16,12 @@
     <!-- 其他 -->
     <script src="./lib/threebox.js"></script><!-- 云 -->    
     <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>    
-    <link href="./css/style.css" rel="stylesheet" />    
+    <link href="./css/style.css" rel="stylesheet" />
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v3.1.3/mapbox-gl-directions.js'></script>
+    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v3.1.3/mapbox-gl-directions.css' type='text/css' />    
+    <!-- 火焰 -->
+    <script src="./lib/Fire.js"></script>
+    <script src="./lib/FireShader.js"></script>
 </head>
 <body>
 <div id='map'></div>
@@ -27,12 +32,13 @@
     <input type="checkbox" id="noiseLayer"><label for="noiseLayer">噪音</label>
     <input type="checkbox" id="23D"><label for="23D">二三维混搭</label>
     <input type="checkbox" id="landuse"><label for="landuse">土地利用数据</label>
+    <!-- <input type="checkbox" id="direction-control"><label for="direction-control">导航</label> -->
     <br />
     <button id="load-trips">加载轨迹</button>
-    <button id="indoorMap">室内地图</button>
+    <button id="indoorMapControl" class="openPanel">室内地图</button>
     <button id="cityControl" class="openPanel">城市切换</button>
     <button id="lightControl" class="openPanel">光照</button>
-    <button id="multiScaleControl" class="openPanel">多尺度展示</button>
+    <button id="multiScaleControl" class="openPanel">多尺度混搭</button>
     <button id="cloudControl" class="openPanel">云</button>
     <!-- <button id="baselayerControl" class="openPanel">底图切换</button><br/> -->
 </div>
@@ -77,6 +83,12 @@
     <input type="radio" name="city" value="Guangzhou">广州<br/>
     <input type="radio" name="city" value="Nanjing">南京<br/>
     <input type="radio" name="city" value="Wuhan">武汉<br/>
+</div>
+
+<div id="indoorMapControlPanel" class="controlPanel panel">
+    <button id="indoor-beijing1">北京爱琴海购物中心</button>
+    <button id="indoor-beijing2">北京侨福芳草地购物中心</button>
+    <button id="indoor-shenzhen">深圳港隆城购物中心</button>
 </div>
 
 <div id='lightControlPanel' class='controlPanel panel'>

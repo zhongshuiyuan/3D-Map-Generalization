@@ -283,7 +283,11 @@ for (var i=0;i<1000;i++){
     randomDistribution[i]=Math.random();
 }
 var speedFactor=document.getElementById("cloud-speed").value/10000;
-var cloudDirection=document.getElementById("cloud-direction").value;
+var cloudDirection = document.getElementById("cloud-direction").value;
+
+// Initialize threebox
+window.threebox = new Threebox(map);
+threebox.setupDefaultLights();
 
 document.getElementById("cloudToggle").addEventListener("change",function(){
     if (this.checked){
@@ -292,9 +296,9 @@ document.getElementById("cloudToggle").addEventListener("change",function(){
             return;
         }
 
-        // Initialize threebox
-        window.threebox = new Threebox(map);
-        threebox.setupDefaultLights();
+        // // Initialize threebox
+        // window.threebox = new Threebox(map);
+        // threebox.setupDefaultLights();
 
         updateCloud();
 
@@ -422,3 +426,28 @@ function randomNormalDistribution(){
     //return [u*c,v*c];
     return u*c;
 }
+
+//测试一下用threebox添加火焰 测试失败 只有object3d不行 还要有render循环
+function addFire() { 
+    var loader = new THREE.TextureLoader();
+    loader.crossOrigin = '';
+
+    var fireTex = loader.load("https://s3-us-west-2.amazonaws.com/s.cdpn.io/212131/Fire.png");
+
+    var wireframeMat = new THREE.MeshBasicMaterial({
+        color : new THREE.Color(0xffffff),
+        wireframe : true
+    });
+
+    fire = new THREE.Fire(fireTex);
+
+    var wireframe = new THREE.Mesh(fire.geometry, wireframeMat.clone());
+    fire.add(wireframe);
+    wireframe.visible = true;
+    wireframe.visible = false;
+
+    window.threebox2 = new Threebox(map);
+    threebox2.setupDefaultLights();
+    threebox2.addAtCoordinate(fire, [121.444534, 31.171876, 0], { scaleToLatitude: true, preScale: 200 });
+}
+//addFire();
