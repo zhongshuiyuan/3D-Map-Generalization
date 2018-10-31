@@ -187,7 +187,7 @@ function constructLayer(myId,mySource,myLayer,myMin,myMax){
             //     40, 240,
             //     75, 600
             // ],
-            'fill-extrusion-opacity': 0.8,
+            // 'fill-extrusion-opacity': 0.8,
         }
     };
 }
@@ -262,11 +262,34 @@ function addIndoorLayer() {
         'type': 'fill-extrusion',
         'source': 'indoor3d',
         'paint': {
-            'fill-extrusion-color': 'rgb(255,255,191)',
-            'fill-extrusion-height': 10,
+            'fill-extrusion-color': 'rgb(215,25,28)',
+            'fill-extrusion-height': 30,
             'fill-extrusion-opacity': 0.8
         }
     })
+
+    var xixi = "beijing_L1";
+    map.addSource(xixi,constructSource(xixi));
+    map.addLayer({
+        'id': xixi,
+        'source': xixi,
+        'source-layer': xixi,
+        'type': 'fill-extrusion',
+        'minzoom': 10,
+        'maxzoom': 22,
+        'paint': {
+            'fill-extrusion-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'height'],
+                0, 'rgb(255,255,191)',
+                20, 'rgb(253,174,97)',
+                40, "rgb(215,25,28)",
+            ],
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-opacity': 0.8,
+        }
+    });
 }
 
 map.on("click", "indoor3d", function (e) {

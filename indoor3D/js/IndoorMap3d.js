@@ -310,6 +310,11 @@ IndoorMap3d = function(mapdiv){
 
     }
 
+    //add by xy 在该类的外部也能让renderer render
+    this.redraw = function () { 
+        redraw();
+    }
+
     function redraw(){
         _controls.viewChanged = true;
     }
@@ -320,8 +325,12 @@ IndoorMap3d = function(mapdiv){
         var floors = _this.mall.floors;
         floors.forEach(floor => { 
             floor.traverse(function (object) {
-                if (object.type == "solidroom" || object.type == "Line") { 
+                //if (object.type == "solidroom" || object.type == "Line") {
+                if (object.type == "solidroom") {
                     object.visible = flag;
+                }
+                else if (object.type == "3dsymbol" || object.type == "dynamicsymbol") { 
+                    object.visible = !flag;
                 }
             });
         })
@@ -351,7 +360,7 @@ IndoorMap3d = function(mapdiv){
 
     //判断zoom是否跨过分界点，跨的时候改变显示内容
     var queueZoom = [1, 1];
-    var threshold = 0.6;
+    const threshold = 0.9;
     function checkZoom() { 
         var zoom = _this.getZoom();
         queueZoom.shift();

@@ -482,6 +482,19 @@ var default3dTheme = {
         transparent: false
     },
 
+    //add by xy 奇数层和偶数层颜色不一样，好区分
+    floorOdd: {
+        color: "#E0E0E0",
+        opacity: 1,
+        transparent: false
+    },
+
+    floorEven: {
+        color: "#C0C0C0",
+        opacity: 1,
+        transparent: false
+    },
+
     //selected room's style
     selected: "#ffff55",
 
@@ -518,7 +531,7 @@ var default3dTheme = {
             case 101: //food
                 roomStyle = {
                     color: "#1f77b4",
-                    opacity: 0.7,
+                    opacity: 0.7,//comment by xy 为了让wifi热力图更清楚可调低透明度
                     transparent: true
                 };
                 break;
@@ -733,8 +746,9 @@ function ParseModel(json, is3d, theme){
 
             if(is3d) { // for 3d model
                 var floorObj = new THREE.Object3D();
-
-                floorHeight = floor.High / scale;
+                //edit by xy 增加楼层之间的间距
+                //floorHeight = floor.High / scale;
+                floorHeight = floor.High / scale * 2;
                 if (floorHeight == 0.0) { //if it's 0, set to 50.0
                     floorHeight = 50.0;
                 }
@@ -742,7 +756,10 @@ function ParseModel(json, is3d, theme){
                 points = parsePoints(floor.Outline[0][0]);
                 shape = new THREE.Shape(points);
                 geometry = new THREE.ShapeGeometry(shape);
-                mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(theme.floor));
+                //comment by xy 这里可以修改地板颜色使得奇数层偶数层颜色不同，好区分
+                //mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(theme.floor));
+                var floorTheme = (i % 2 != 0) ? theme.floorOdd : theme.floorEven;
+                mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(floorTheme));
                 mesh.position.set(0, 0, -5);
 
                 floorObj.height = floorHeight;
@@ -771,7 +788,9 @@ function ParseModel(json, is3d, theme){
                     floorObj.points.push({ name: funcArea.Name, type: funcArea.Type, position: new THREE.Vector3(center[0] * scale, floorHeight * scale, -center[1] * scale)});
 
                     //solid model
-                    extrudeSettings = {amount: floorHeight, bevelEnabled: false};
+                    //edit by xy 把房间变矮
+                    //extrudeSettings = {amount: floorHeight, bevelEnabled: false};
+                    extrudeSettings = {amount: floorHeight/2, bevelEnabled: false};
                     geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
                     material = new THREE.MeshLambertMaterial(theme.room(parseInt(funcArea.Type), funcArea.Category));
                     mesh = new THREE.Mesh(geometry, material);
@@ -783,7 +802,9 @@ function ParseModel(json, is3d, theme){
                     //top wireframe
                     geometry = shape.createPointsGeometry();
                     wire = new THREE.Line(geometry, new THREE.LineBasicMaterial(theme.strokeStyle));
-                    wire.position.set(0, 0, floorHeight);
+                    //edit by xy 房间变矮
+                    //wire.position.set(0, 0, floorHeight);
+                    wire.position.set(0, 0, floorHeight/2);
                     
                     floorObj.add(wire);
                 }else{

@@ -3,6 +3,7 @@ var params = {
     dim: "3d"
 };
 var map = IndoorMap(params);
+const scale = 0.1;//IndoorMap.js function ParseModel
 
 var buildings = ['data/testMapData.json', 'data/beijing2.json', 'data/shenzhen.json'];
 var buildingID = GetQueryString("buildingID");
@@ -10,7 +11,7 @@ var data = buildingID ? buildings[buildingID - 1] : buildings[0];
 
 map.load(data, function () {
     //map.setTheme(testTheme);
-    map.showAreaNames(true).setSelectable(true).showFloor(1);
+    map.showAreaNames(false).showPubPoints(false).setSelectable(true).showFloor(1);
     var ul = IndoorMap.getUI(map);
     document.body.appendChild(ul);
 
@@ -19,7 +20,8 @@ map.load(data, function () {
     var axes = new THREE.AxisHelper(100);
     scene.add(axes);
 
-    //addSymbol();
+    addSymbol();
+    //addHeatmap();
 });
 
 //从url获取当前要显示的是哪栋建筑，从主页面向iframe传递参数
@@ -30,53 +32,175 @@ function GetQueryString(name)
      if(r!=null)return  unescape(r[2]); return null;
 }
 
+//测试按钮
 document.getElementById("test").addEventListener("click", function () { 
     
 })
 
 function addSymbol() {
-    var scene = map.getScene();
-    //加载模型
-    var onProgress = function(xhr) {
-        if (xhr.lengthComputable) {
-            var percentComplete = xhr.loaded / xhr.total * 100;			            
-            progresstext = Math.round(percentComplete, 2) + '% 已经加载';
-            console.log(progresstext);
-        }
-    };
-    var onError = function(xhr) {};
-    var mtlLoader = new THREE.MTLLoader();
-    mtlLoader.setPath('objModel/');
-    mtlLoader.load('food.mtl', function(materials) {
-        materials.preload();
-        var objLoader = new THREE.OBJLoader();
-        objLoader.setMaterials(materials);
-        objLoader.setPath('objModel/');
-        objLoader.load('food.obj', function(object) {
-            object.position.y = 10;
-            object.rotation.x = 180;
-            object.rotation.z = 45;
-            object.scale.set(50, 50, 50);
-            scene.add(object);	
-        }, onProgress, onError);
-    });
-
     var floorObj = map.mall.floors[1];//测试一楼
     var funcAreaJson = map.mall.getFloorJson(1).FuncAreas;
-    // funcAreaJson[0].Center[0];
-    // funcAreaJson[0].Center[1];
-
+    
+    loadSymbol('objModel/food.obj', 'objModel/food.mtl', '101');
+    //loadSymbol('objModel/gouwuche.obj', 'objModel/gouwuche.mtl', '102');
+    loadSymbol('objModel/toiletry.obj', 'objModel/toiletry.mtl', '103');
+    
+    
+ 
+    function loadSymbol(objName, mtlName, category) { 
+        loadObj(objName, mtlName, function (object) { 
+            funcAreaJson.forEach(room => {
+                if (room.Category == category) { 
+                    var center = room.Center;
+                    var objectClone = object.clone();
+                    objectClone.type = "3dsymbol";
+                    objectClone.position.x = center[0];
+                    objectClone.position.y = center[1];
+                    floorObj.add(objectClone);
+                    var sphere = new SpherePulse(Math.random()*4, center);
+                    floorObj.add(sphere.getSphere());
+                    map.redraw();
+                }            
+            }) 
+        })    
+    }
 }
 
-function addHeatmap() { 
-    //给地板贴纹理表示wifi信号分布
-    if (buildingID == 1) {//只选了一栋楼 
-        var floorMesh = map.mall.floors[1].children[0];//只选了一层楼添加
-        assignUVs(floorMesh.geometry);
-        var texture = THREE.ImageUtils.loadTexture("./img/heatmap.png");
-        floorMesh.material = new THREE.MeshBasicMaterial({ map: texture });
-        floorMesh.material.needsUpdate = true;
+function loadObj(objName, mtlName, callback) { 
+    //加载过程和结果处理
+    var onProgress = function(xhr) {
+        if (xhr.lengthComputable) {
+            var percentComplete = xhr.loaded / xhr.total * 100;
+            var percentText = Math.round(percentComplete, 2) + '% 已经加载';
+            console.log(percentText);
+        }
+    };
+    var onError = function(xhr) {};   
+    //加载、回调
+    var loader = new THREE.OBJMTLLoader();              
+    loader.load(objName, mtlName, function (object) {
+        object.traverse(function (child) {
+            if (child instanceof THREE.Mesh) {
+                child.material.transparent = false;
+                child.shading = THREE.FlatShading;
+                //child.depthWrite = 10;
+            }
+        });
+        object.scale.set(25, 25, 25);
+        object.rotation.x = Math.PI / 2;//如要往floorObj里加模型，要考虑它是后来旋转过的
+        object.visible = false;//缩小后才可见
+        callback(object);
+    }, onProgress, onError);
+}
+
+function SpinningWifi(size,center) { 
+    var _this = this;
+    var plane;
+    this.size = size;
+
+    this.getWifi = function () { 
+        return plane;
     }
+
+    this.init = function () { 
+        // create the ground plane
+        var planeGeometry = new THREE.PlaneGeometry(size, size);
+        var texture = THREE.ImageUtils.loadTexture("./img/wifi.png");
+        planeMaterial = new THREE.MeshBasicMaterial({ map: texture,transparent:true,side:THREE.DoubleSide });
+        plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.position.x = center[0];
+        plane.position.z = -center[1];
+        plane.position.y = size / 2;
+
+        animate();
+    }
+
+    var animate = function () {
+        requestAnimationFrame( animate );
+        plane.rotation.y += 0.01;
+        map.redraw();
+    };
+    
+    _this.init();
+}
+
+function SpherePulse(radius, center) { 
+    var _this = this;
+    var scale = 0.1;//IndoorMap.js function ParseModel
+    var sphere, mater;//sphereMaterial,sphereMaterialTemp;
+    this.radius = radius;
+    this.center = center;
+
+    this.getSphere = function () { 
+        return sphere;
+    }
+
+    this.init = function () { 
+        //设置球体的值
+        var radius = _this.radius, center = _this.center;
+        var segemnt = 32, rings = 16;
+
+        mater = getGlow();
+        sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, segemnt, rings),
+            mater
+        );
+        sphere.position.x = center[0];
+        sphere.position.y = center[1];
+        sphere.type = "dynamicsymbol";
+        sphere.visible = false;
+        sphere.geometry.verticesNeedUpdate = true;
+        sphere.geometry.normalsNeedUpdate = true;
+        sphereAnimate();
+    }
+
+    function sphereAnimate(){
+        requestAnimationFrame( sphereAnimate );
+        sphererender();
+    }
+    var start = Date.now();//用于持续动画
+    function sphererender(){
+        // TWEEN.update();
+        if(Date.now()-start>1){
+            if(sphere.scale.x<100)
+            {
+                sphere.material = mater;
+                sphere.scale.x++;
+                sphere.scale.y++;
+                sphere.scale.z++;
+            }
+            
+            if(sphere.scale.x>=100){
+                sphere.material = new THREE.MeshLambertMaterial( {color: 0x7777ff, transparent:true, opacity:0.05} );
+                setTimeout(function(){
+                    sphere.scale.x=1;
+                    sphere.scale.y=1;
+                    sphere.scale.z=1;
+                },100);
+            }
+        }
+        map.redraw();
+        start=Date.now();
+    }
+
+    _this.init();
+}
+
+function addHeatmap() {
+    //地板
+    var floorMesh = map.mall.floors[1].children[0];//只选了一层楼添加
+    //给地板贴纹理
+    assignUVs(floorMesh.geometry);
+    var texture = THREE.ImageUtils.loadTexture("./img/wifiheatmap.png");
+    floorMesh.material = new THREE.MeshBasicMaterial({ map: texture,opacity:1 });
+    floorMesh.material.needsUpdate = true;
+    //旋转的wifi符号
+    var wifi1 = new SpinningWifi(16, [14, 31]);
+    map.getScene().add(wifi1.getWifi());
+    var wifi2 = new SpinningWifi(16, [4, -13]);
+    map.getScene().add(wifi2.getWifi());
+    var wifi3 = new SpinningWifi(16, [0, -50]);
+    map.getScene().add(wifi3.getWifi());
 }
 
 function assignUVs(geometry) {
@@ -104,4 +228,22 @@ function assignUVs(geometry) {
         ]);
     }
     geometry.uvsNeedUpdate = true;
+}
+
+//列举数据里每种类型的店各有哪些
+function listCategory() { 
+    // var categories = {};
+    // for (var i = 1; i <= 6; i++) { 
+    //     var funcAreaJson = map.mall.getFloorJson(i).FuncAreas;
+    //     //console.log(funcAreaJson);        
+    //     funcAreaJson.forEach(room => { 
+    //         if (categories[room.Category] == undefined) {
+    //             categories[room.Category] = [];
+    //             categories[room.Category].push(room.Name);
+    //         } else { 
+    //             categories[room.Category].push(room.Name);
+    //         }
+    //     })
+    // }    
+    // console.log(categories);
 }

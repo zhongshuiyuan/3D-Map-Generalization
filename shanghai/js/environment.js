@@ -1,28 +1,90 @@
-///********************控制噪音、光照、云雾等环境信息***********************/
 var noiseToggle = document.getElementById("noiseLayer");
-noiseToggle.onclick = function () { 
-    if (map.getSource("noise_32levels") === undefined) { 
-        addNoise('noise_32levels', './data/road32.png', 16, 18);
-        addNoise('noise_16levels', './data/road16.png', 14, 16);
-        addNoise('noise_8levels', './data/road8.png', 12.5, 14);
-        addNoise('noise_4levels', './data/road4.png', 11, 12.5);
+noiseToggle.onclick = function () {
+    if (map.getSource("noise4levels") === undefined) {
+        addNoise('noise4levels', './data/zy/zy4.png', 11, 12);
+        addNoise('noise3levels', './data/zy/zy3.png', 10, 11);
+        addNoise('noise2levels', './data/zy/zy2.png', 9, 10);
+        addNoise('noise1levels', './data/zy/zy1.png', 8, 9)
     }
     var visibility = this.checked ? 'visible' : 'none';
-    map.setLayoutProperty('noise_32levels', 'visibility', visibility);
-    map.setLayoutProperty('noise_16levels','visibility',visibility);
-    map.setLayoutProperty('noise_8levels', 'visibility', visibility);
-    map.setLayoutProperty('noise_4levels','visibility',visibility);
+    map.setLayoutProperty('noise4levels','visibility',visibility);
+    map.setLayoutProperty('noise3levels','visibility',visibility);
+    map.setLayoutProperty('noise2levels','visibility',visibility);
+    map.setLayoutProperty('noise1levels','visibility',visibility);
+    if (map.getSource("noise5levels") === undefined) {
+
+        addbuNoise('noise7levels', './data/zy/zy7.png', 15, 15.5);
+        addbuNoise('noise6levels', './data/zy/zy6.png', 13.5, 15);
+        addbuNoise('noise5levels', './data/zy/zy5.png', 12, 13.5)
+    }
+    if (map.getSource("noise9levels") === undefined) {
+        addbupNoise('noise9levels', './data/zy/zy9.png', 16, 17);
+    var visibility = this.checked ? 'visible' : 'none';
+    map.setLayoutProperty('noise7levels','visibility',visibility);
+    map.setLayoutProperty('noise6levels','visibility',visibility);
+    map.setLayoutProperty('noise5levels','visibility',visibility);
+        if (map.getSource("noise8levels") === undefined) {
+            addbuwNoise('noise8levels', './data/zy/zy8.png', 15.5, 16);
+        }
+        var visibility = this.checked ? 'visible' : 'none';
+        map.setLayoutProperty('noise8levels','visibility',visibility);
+    var visibility = this.checked ? 'visible' : 'none';
+        map.setLayoutProperty('noise9levels','visibility',visibility);
+
+    var visibility = this.checked ? "visible" : "none";
+    map.setLayoutProperty('zy1', "visibility", visibility);
+    map.setLayoutProperty('zy2', "visibility", visibility);
+    map.setLayoutProperty('zy3', "visibility", visibility);
+    map.setLayoutProperty('zy4', "visibility", visibility);
+    // 光标转点
+    map.on('mouseenter', 'zy1', function () {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'zy1', function () {
+        map.getCanvas().style.cursor = '';
+    });
+    map.on('mouseenter', 'zy2', function () {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'zy2', function () {
+        map.getCanvas().style.cursor = '';
+    });
+//点击弹出显示噪音情况
+    map.on('click','zy1' , function (e) {
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(e.features[0].properties.noise)
+            .addTo(map);
+    });
+    map.on('click','zy2' , function (e) {
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(e.features[0].properties.noise)
+            .addTo(map);
+    });
+    map.on('click','zy3' , function (e) {
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(e.features[0].properties.noise)
+            .addTo(map);
+    });
+    map.on('click','zy4' , function (e) {
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(e.features[0].properties.noise)
+            .addTo(map);
+    });
 };
 
-function addNoise(id,url,minzoom,maxzoom) { 
+function addNoise(id,url,minzoom,maxzoom) {
     map.addSource(id, {
         type: 'image',
         url: url,//使用arcgis核密度做好的
         coordinates: [
-            [121.2981, 31.2414],
-            [121.4660, 31.2414],
-            [121.4660, 31.1232],
-            [121.2981, 31.1232]
+            [120.85640366454, 31.87018886854],
+            [121.97383066454, 31.87018886854],
+            [121.97383066454, 30.69465566454],
+            [120.85640366454, 30.69465566454]
         ]
     });
     map.addLayer({
@@ -32,10 +94,149 @@ function addNoise(id,url,minzoom,maxzoom) {
         minzoom: minzoom,
         maxzoom: maxzoom,
         paint: {
-            'raster-opacity': 0.7
+            'raster-opacity': 0.4
         }
     }, labelLayerId);
 }
+function addbuNoise(id,url,minzoom,maxzoom) {
+    map.addSource(id, {
+        type: 'image',
+        url: url,//使用arcgis核密度做好的
+        coordinates: [
+            [121.151871747189, 31.245485502178],
+            [121.472271747189, 31.245485502178],
+            [121.472271747189, 30.975085502178],
+            [121.151871747189, 30.975085502178]
+        ]
+    });
+    map.addLayer({
+        id: id,
+        source: id,
+        type: 'raster',
+        minzoom: minzoom,
+        maxzoom: maxzoom,
+        paint: {
+            'raster-opacity': 0.4
+        }
+    }, labelLayerId);
+}
+}
+function addbupNoise(id,url,minzoom,maxzoom) {
+    map.addSource(id, {
+        type: 'image',
+        url: url,//使用arcgis核密度做好的
+        coordinates: [
+            [121.151771747190, 31.245325502160],
+            [121.472171747190, 31.245325502160],
+            [121.472171747190, 30.974925502160],
+            [121.151771747190, 30.974925502160]
+        ]
+    });
+    map.addLayer({
+        id: id,
+        source: id,
+        type: 'raster',
+        minzoom: minzoom,
+        maxzoom: maxzoom,
+        paint: {
+            'raster-opacity': 0.4
+        }
+    }, labelLayerId);
+}
+function addbuwNoise(id,url,minzoom,maxzoom) {
+    map.addSource(id, {
+        type: 'image',
+        url: url,//使用arcgis核密度做好的
+        coordinates: [
+            [121.151771747190, 31.245345502160],
+            [121.472171747190, 31.245345502160],
+            [121.472171747190, 30.974945502160],
+            [121.151771747190, 30.974945502160]
+        ]
+    });
+    map.addLayer({
+        id: id,
+        source: id,
+        type: 'raster',
+        minzoom: minzoom,
+        maxzoom: maxzoom,
+        paint: {
+            'raster-opacity': 0.4
+        }
+    }, labelLayerId);
+}
+var noiseZoom = [7,8,12,16,18];
+map.on('load', function() {
+    for (var i = 1; i<=4; i++) {
+        var xixi = 'zy' + (5-i).toString();
+        var minLevel = noiseZoom[4 - i];//特定缩放级别对应特定数
+        var maxLevel = noiseZoom[5 - i];
+        map.addSource(xixi, noiseSource(xixi));
+        map.addLayer(noiseLayer(xixi, xixi, xixi, minLevel, maxLevel));
+    }
+});
+
+function noiseSource(mySource) {
+    return {
+        'type': 'vector',
+        'scheme': 'tms',
+        'tiles': ['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/shzy%3A'+mySource+'@EPSG%3A900913@pbfpbf/{z}/{x}/{y}.pbf']
+    };
+}
+
+function noiseLayer(myId, mySource, myLayer, myMin, myMax) {
+    return {
+        'id': myId,
+        'source': mySource,
+        'source-layer': myLayer,
+        'type': 'fill-extrusion',
+        'minzoom': myMin,
+        'maxzoom': myMax,
+        'paint': {
+            'fill-extrusion-color': 'transparent',
+            'fill-extrusion-opacity': 0
+        }
+    }
+}
+
+///********************控制噪音、光照、云雾等环境信息***********************/
+// var noiseToggle = document.getElementById("noiseLayer");
+// noiseToggle.onclick = function () { 
+//     if (map.getSource("noise_32levels") === undefined) { 
+//         addNoise('noise_32levels', './data/road32.png', 16, 18);
+//         addNoise('noise_16levels', './data/road16.png', 14, 16);
+//         addNoise('noise_8levels', './data/road8.png', 12.5, 14);
+//         addNoise('noise_4levels', './data/road4.png', 11, 12.5);
+//     }
+//     var visibility = this.checked ? 'visible' : 'none';
+//     map.setLayoutProperty('noise_32levels', 'visibility', visibility);
+//     map.setLayoutProperty('noise_16levels','visibility',visibility);
+//     map.setLayoutProperty('noise_8levels', 'visibility', visibility);
+//     map.setLayoutProperty('noise_4levels','visibility',visibility);
+// };
+
+// function addNoise(id,url,minzoom,maxzoom) { 
+//     map.addSource(id, {
+//         type: 'image',
+//         url: url,//使用arcgis核密度做好的
+//         coordinates: [
+//             [121.2981, 31.2414],
+//             [121.4660, 31.2414],
+//             [121.4660, 31.1232],
+//             [121.2981, 31.1232]
+//         ]
+//     });
+//     map.addLayer({
+//         id: id,
+//         source: id,
+//         type: 'raster',
+//         minzoom: minzoom,
+//         maxzoom: maxzoom,
+//         paint: {
+//             'raster-opacity': 0.7
+//         }
+//     }, labelLayerId);
+// }
 
 // //动态符号
 // document.getElementById("dynamic_symbol").addEventListener("click", toggleDynamicSymbol);
