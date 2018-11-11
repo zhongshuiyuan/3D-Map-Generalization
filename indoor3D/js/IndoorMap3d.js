@@ -325,11 +325,10 @@ IndoorMap3d = function(mapdiv){
         var floors = _this.mall.floors;
         floors.forEach(floor => { 
             floor.traverse(function (object) {
-                //if (object.type == "solidroom" || object.type == "Line") {
-                if (object.type == "solidroom") {
+                if (object.type == "solidroom" || object.type == "Line") {
                     object.visible = flag;
                 }
-                else if (object.type == "3dsymbol" || object.type == "dynamicsymbol") { 
+                else if (object.type == "3dsymbol" ||object.type=="DashedLine") { 
                     object.visible = !flag;
                 }
             });
@@ -360,7 +359,7 @@ IndoorMap3d = function(mapdiv){
 
     //判断zoom是否跨过分界点，跨的时候改变显示内容
     var queueZoom = [1, 1];
-    const threshold = 0.9;
+    const threshold = 0.6;
     function checkZoom() { 
         var zoom = _this.getZoom();
         queueZoom.shift();

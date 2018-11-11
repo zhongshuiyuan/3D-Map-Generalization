@@ -11,7 +11,7 @@ var data = buildingID ? buildings[buildingID - 1] : buildings[0];
 
 map.load(data, function () {
     //map.setTheme(testTheme);
-    map.showAreaNames(false).showPubPoints(false).setSelectable(true).showFloor(1);
+    map.showAreaNames(true).showPubPoints(true).setSelectable(true).showFloor(1);
     var ul = IndoorMap.getUI(map);
     document.body.appendChild(ul);
 
@@ -33,22 +33,28 @@ function GetQueryString(name)
 }
 
 //测试按钮
-document.getElementById("test").addEventListener("click", function () { 
-    
+var popularitySwitch = true;
+document.getElementById("popularity").addEventListener("click", function () { 
+    var floorObj = map.mall.floors[1];//测试一楼
+    floorObj.children.forEach(object => { 
+        if (object.type == "dynamicsymbol") { 
+            object.visible = popularitySwitch;
+        }
+    })
+    map.redraw();
+    popularitySwitch = !popularitySwitch;
 })
 
 function addSymbol() {
     var floorObj = map.mall.floors[1];//测试一楼
     var funcAreaJson = map.mall.getFloorJson(1).FuncAreas;
     
-    loadSymbol('objModel/food.obj', 'objModel/food.mtl', '101');
+    loadSymbol('objModel/daocha.obj', 'objModel/daocha.mtl', 1000,'101');
     //loadSymbol('objModel/gouwuche.obj', 'objModel/gouwuche.mtl', '102');
-    loadSymbol('objModel/toiletry.obj', 'objModel/toiletry.mtl', '103');
-    
-    
+    loadSymbol('objModel/bao.obj', 'objModel/bao.mtl', 250,'103');    
  
-    function loadSymbol(objName, mtlName, category) { 
-        loadObj(objName, mtlName, function (object) { 
+    function loadSymbol(objName, mtlName, scale,category) { 
+        loadObj(objName, mtlName, scale,function (object) { 
             funcAreaJson.forEach(room => {
                 if (room.Category == category) { 
                     var center = room.Center;
@@ -66,7 +72,7 @@ function addSymbol() {
     }
 }
 
-function loadObj(objName, mtlName, callback) { 
+function loadObj(objName, mtlName, scale, callback) { 
     //加载过程和结果处理
     var onProgress = function(xhr) {
         if (xhr.lengthComputable) {
@@ -86,7 +92,7 @@ function loadObj(objName, mtlName, callback) {
                 //child.depthWrite = 10;
             }
         });
-        object.scale.set(25, 25, 25);
+        object.scale.set(scale, scale, scale);//floorObj本身就缩小了十倍，所以要放大
         object.rotation.x = Math.PI / 2;//如要往floorObj里加模型，要考虑它是后来旋转过的
         object.visible = false;//缩小后才可见
         callback(object);

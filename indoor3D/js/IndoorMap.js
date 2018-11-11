@@ -804,9 +804,22 @@ function ParseModel(json, is3d, theme){
                     wire = new THREE.Line(geometry, new THREE.LineBasicMaterial(theme.strokeStyle));
                     //edit by xy 房间变矮
                     //wire.position.set(0, 0, floorHeight);
-                    wire.position.set(0, 0, floorHeight/2);
-                    
+                    wire.position.set(0, 0, floorHeight/2);                    
                     floorObj.add(wire);
+
+                    //bottom wireframe add by xy 在缩小只显示符号的时候画出虚线的轮廓线
+                    geometry.computeLineDistances();//必须，否则无虚线
+                    var dashedMaterial = new THREE.LineDashedMaterial( {
+                        color: 0xffffff,
+                        linewidth: 1,
+                        scale: 1,
+                        dashSize: 20,
+                        gapSize: 10,
+                    });
+                    var dashedWire = new THREE.Line(geometry, dashedMaterial);
+                    dashedWire.visible = false;
+                    dashedWire.type = "DashedLine";
+                    floorObj.add(dashedWire);
                 }else{
                     funcArea.fillColor = theme.room(parseInt(funcArea.Type), funcArea.Category).color;
                     funcArea.strokeColor = theme.strokeStyle.color;
