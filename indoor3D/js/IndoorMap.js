@@ -808,7 +808,8 @@ function ParseModel(json, is3d, theme){
                     floorObj.add(wire);
 
                     //bottom wireframe add by xy 在缩小只显示符号的时候画出虚线的轮廓线
-                    geometry.computeLineDistances();//必须，否则无虚线
+                    //.computeLineDistances() has been removed. Use THREE.Line.computeLineDistances() instead.
+                    //geometry.computeLineDistances();//必须，否则无虚线
                     var dashedMaterial = new THREE.LineDashedMaterial( {
                         color: 0xffffff,
                         linewidth: 1,

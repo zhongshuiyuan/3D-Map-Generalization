@@ -12,10 +12,11 @@
 
 <body>
 <div id='map'></div>
+<div id='indoorMap'></div>
 
 <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
 <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.js"></script>
 <!-- <script src="js/three.min.js"></script> -->
 <script src="js/Detector.js"></script>
 <script src="js/OrbitControls.js"></script>
@@ -26,6 +27,17 @@
 <script src="js/IndoorMap3d.js"></script>
 <script src="js/Theme.js"></script>
 <script>
+const THREE = window.THREE;
+
+var params = {
+    dim: "3d",
+    mapDiv:"indoorMap"
+};
+var indoorMap = IndoorMap(params);
+indoorMap.load('data/testMapData.json', function(){
+    indoorMap.showFloor(1).showAreaNames(false).setSelectable(false).showPubPoints(false);
+});
+
 mapboxgl.accessToken = 'pk.eyJ1IjoiYXJzbHh5IiwiYSI6ImNqZzRzemViajJ4MWUzM3Bjc3Z2M283ajMifQ.VuhGIVxu7Y9H7V4gUxTMdw';
 var map = window.map = new mapboxgl.Map({
     container: 'map',
@@ -36,30 +48,44 @@ var map = window.map = new mapboxgl.Map({
     style: 'mapbox://styles/mapbox/light-v9',
     hash: true
 });
-//const THREE = window.THREE;
+
 class ThreeJSCube {
     constructor() {
         this.id = 'mycustomlayer';
         this.type = 'custom';
         this.renderingMode = '3d';
-        this.translate = [0.279471, 0.364935, 0.0000025];
-        this.scale = 0.000003;
+        
+        //放置的位置、角度、大小等
+        var translate = fromLL(-79.39047197009937,43.657598222977015);
+        this.transform = {
+            translateX: translate[0],
+            translateY: translate[1],
+            translateZ: 0.0000025,
+            rotateX: Math.PI / 2,
+            rotateY: 0,
+            rotateZ: 0,
+            scale: 0.0000003
+        }
+
         this.camera = new THREE.Camera();
         this.scene = new THREE.Scene();
 
+        this.object3d=indoorMap.getScene().children[2];
+        this.scene.add(this.object3d);
+        
         //cube
-        var geometry = new THREE.BoxGeometry(1, 1, 1);
-        var material = new THREE.MeshPhongMaterial({ color: 0xeeeeff });
-        this.cube = new THREE.Mesh(geometry, material);
-        this.scene.add(this.cube);
+        // var geometry = new THREE.BoxGeometry(1, 1, 1);
+        // var material = new THREE.MeshPhongMaterial({ color: 0xeeeeff });
+        // this.cube = new THREE.Mesh(geometry, material);
+        // this.scene.add(this.cube);
 
         // show axes in the screen
-        var axes = new THREE.AxisHelper(1);
+        var axes = new THREE.AxisHelper(100);
         this.scene.add(axes);
 
         //light
         const directionalLight = new THREE.DirectionalLight(0xffffff);
-        directionalLight.position.set(0, -70, 100).normalize();
+        directionalLight.position.set(100, 100, 100).normalize();
         this.scene.add(directionalLight);
     }
     onAdd(map, gl) {
@@ -71,11 +97,18 @@ class ThreeJSCube {
         this.renderer.autoClear = false;
     }
     render(gl, matrix) {
+        const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), this.transform.rotateX);
+        const rotationY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), this.transform.rotateY);
+        const rotationZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), this.transform.rotateZ);
+
         const m = new THREE.Matrix4().fromArray(matrix);
-        const l = new THREE.Matrix4().makeTranslation(this.translate[0], this.translate[1], this.translate[2])
-            .scale(new THREE.Vector3(this.scale, -this.scale, this.scale));
-        this.cube.rotation.x += 0.01;
-        this.cube.rotation.y += 0.01;
+        const l = new THREE.Matrix4().makeTranslation(this.transform.translateX, this.transform.translateY, this.transform.translateZ)
+            .scale(new THREE.Vector3(this.transform.scale, -this.transform.scale, this.transform.scale))
+            .multiply(rotationX)
+            .multiply(rotationY)
+            .multiply(rotationZ);
+        // this.cube.rotation.x += 0.01;
+        // this.cube.rotation.y += 0.01;
 
         this.camera.projectionMatrix.elements = matrix;
         this.camera.projectionMatrix = m.multiply(l);
@@ -84,6 +117,7 @@ class ThreeJSCube {
         this.map.triggerRepaint();
     }
 }
+
 map.on('load', function() {
     map.addLayer({
         'id': '3d-buildings',
@@ -97,9 +131,20 @@ map.on('load', function() {
             'fill-extrusion-height': ["get", "height"]
         }
     });
-    //map.addLayer(new ThreeJSCube(),"country-label-lg");
     map.addLayer(new ThreeJSCube());
 });
+
+// converts from WGS84 Longitude, Latitude into a unit vector anchor at the top left as needed for GL JS custom layers
+function fromLL(lon,lat) {
+    // derived from https://gist.github.com/springmeyer/871897
+    var extent = 20037508.34;
+
+    var x = lon * extent / 180;
+    var y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
+    y = y * extent / 180;
+
+    return [(x + extent) / (2 * extent), 1 - ((y + extent) / (2 * extent))];
+}
 </script>
 </body>
 </html>
