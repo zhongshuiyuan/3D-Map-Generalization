@@ -3,7 +3,7 @@ var params = {
     dim: "3d"
 };
 var map = IndoorMap(params);
-const scale = 0.1;//IndoorMap.js function ParseModel
+const scale = 0.1;//IndoorMap.js-->function ParseModel()
 
 var buildings = ['data/testMapData.json', 'data/beijing2.json', 'data/shenzhen.json'];
 var buildingID = GetQueryString("buildingID");
@@ -17,10 +17,10 @@ map.load(data, function () {
 
     //添加辅助线
     var scene = map.getScene();
-    var axes = new THREE.AxisHelper(100);
+    var axes = new THREE.AxesHelper(100);
     scene.add(axes);
 
-    addSymbol();
+    //addSymbol();
     //addHeatmap();
 });
 

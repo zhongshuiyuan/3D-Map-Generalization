@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>indoor webgl layer</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+    </style>
+</head>
+
+<body>
+<div id='map'></div>
+<!-- 不显示的容纳室内地图的div，必须要有否则会用整个body -->
+<div id='indoorMap'></div>
+
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.js"></script>
+<!-- <script src="js/three.min.js"></script> -->
+<script src="js/Detector.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/IndoorMap.js"></script>
+<script src="js/Projector.js"></script>
+<script src="js/stats.min.js"></script>
+<script src="js/IndoorMap2d.js"></script>
+<script src="js/IndoorMap3d.js"></script>
+<script src="js/Theme.js"></script>
+<link href="css/indoor3D.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/16.3.5/Tween.min.js"></script>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiYXJzbHh5IiwiYSI6ImNqZzRzemViajJ4MWUzM3Bjc3Z2M283ajMifQ.VuhGIVxu7Y9H7V4gUxTMdw';
+var map = window.map = new mapboxgl.Map({
+    container: 'map',
+    zoom: 18,
+    center: [114.30294354404452,30.550546510753705],
+    bearing: 0,
+    pitch: 60,
+    style: 'mapbox://styles/mapbox/light-v9',
+    hash: true
+});
+
+var layerZoom = [11, 12, 13, 14, 15, 15.5, 16, 16.5, 17, 22];
+
+//换数据 每个级别的数据都添加进去
+function addBuildingForCity(cityName) { 
+    for (var i = 1; i <= 9; i++){
+        var xixi=cityName+'_L'+i.toString();
+        var minLevel = layerZoom[9 - i];//特定缩放级别对应特定数据
+        var maxLevel = layerZoom[10 - i];
+        map.addSource(xixi,constructSource(xixi));
+        map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
+    }
+}
+
+//根据图层名称，构造数据源
+function constructSource(mySource){
+    return   {
+        'type':'vector',
+        'scheme':'tms',
+        'tiles':['http://localhost:8080/geoserver/gwc/service/tms/1.0.0/moreLevel%3A'+mySource+'@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
+    };                
+}
+
+//构造图层，添加图层用，不同的缩放级别范围对应不同数据源
+function constructLayer(myId,mySource,myLayer,myMin,myMax,opactiy=0.8){
+    return {
+        'id': myId,
+        'source': mySource,
+        'source-layer': myLayer,
+        'type': 'fill-extrusion',
+        'minzoom': myMin,
+        'maxzoom': myMax,
+        'paint': {
+            'fill-extrusion-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'height'],
+                0, 'rgb(255,255,191)',
+                20, 'rgb(253,174,97)',
+                40, "rgb(215,25,28)",
+            ],
+            'fill-extrusion-height': ['get', 'height'],
+            //对于较高的建筑，高度可以适当拔高，不一定要线性的
+            // 'fill-extrusion-height': [
+            //     'interpolate',
+            //     ['linear'],
+            //     ['get', 'height'],
+            //     0, 0,
+            //     20, 80,
+            //     40, 240,
+            //     75, 600
+            // ],
+            'fill-extrusion-opacity': opactiy,
+        }
+    };
+}
+
+map.on('load', function() {
+    addBuildingForCity("wuhan");
+});
+
+//*************室内地图部分分割线****************//
+//example: 17-22显示L1 L1把包含室内地图的建筑扣掉 17-18显示扣掉的那些建筑 18-22显示室内地图 以及透明的扣掉的那部分建筑 用于判断是否要显示楼层控制按钮 
+const THREE = window.THREE;
+const indoorOutlineName="wuhan_L0";//从L1里扣掉的有室内地图的那些建筑 显示详细室内地图前显示轮廓
+const indoorTransparentName=indoorOutlineName+"transparent";
+const indoorZoomThreshold=layerZoom[layerZoom.length-2]+1;//L1那部分zoom的最开始那1部分显示独栋建筑，后面显示室内地图
+var ul;//楼层控制按钮
+
+//添加与室内地图相关的图层
+map.on('load',function(){
+    var xixi=indoorOutlineName;
+    var minzoom=layerZoom[layerZoom.length-2];
+    var maxzoom=indoorZoomThreshold;
+    map.addSource(xixi,constructSource(xixi));
+    //L1中扣掉的补上
+    map.addLayer(constructLayer(xixi, xixi, xixi, minzoom, maxzoom));
+    //透明 用于判断是否要显示楼层控制按钮
+    map.addLayer(constructLayer(indoorTransparentName, xixi, xixi, indoorZoomThreshold, 22, 0.0));
+    //添加室内地图并设置显示的级别范围
+    map.addLayer(new ThreeJSIndoor());
+    map.setLayerZoomRange('indoorlayer', indoorZoomThreshold, 22);
+})
+
+//室内地图初始化
+var params = {
+    dim: "3d",
+    mapDiv:"indoorMap"
+};
+var indoorMap = IndoorMap(params);
+indoorMap.load('data/testMapData.json', function(){
+    indoorMap.showAllFloors();
+    ul = IndoorMap.getUI(indoorMap);
+    document.body.appendChild(ul);//是在mapbox的那个窗口里加
+    ul.style.display="none";
+});
+
+class ThreeJSIndoor {
+    constructor() {
+        this.id = 'indoorlayer';
+        this.type = 'custom';
+        this.renderingMode = '3d';
+        
+        //放置的位置、角度、大小等
+        var translate = fromLL(114.302921,30.550531);
+        this.transform = {
+            translateX: translate[0],
+            translateY: translate[1],
+            translateZ: 0.0000000,
+            rotateX: Math.PI / 2,
+            rotateY: -6.330223000000004/180*Math.PI,
+            rotateZ: 0,
+            scale: 0.000000013
+        }
+
+        this.camera = new THREE.Camera();
+        this.scene = new THREE.Scene();
+
+        this.object3d=indoorMap.mall.root;
+        this.scene.add(this.object3d);
+
+        // show axes in the screen
+        var axes = new THREE.AxesHelper(100);
+        this.scene.add(axes);
+
+        //light
+        var light = new THREE.DirectionalLight(0xffffff);
+        light.position.set(-500, 500, -500);
+        this.scene.add(light);
+
+        var light = new THREE.DirectionalLight(0xffffff);
+        light.position.set(500, 500, 500);
+        this.scene.add(light);
+    }
+    onAdd(map, gl) {
+        this.map = map;
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: map.getCanvas(),
+            context: gl,
+            antialias:true
+        });
+        this.renderer.autoClear = false;
+    }
+    render(gl, matrix) {
+        const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), this.transform.rotateX);
+        const rotationY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), this.transform.rotateY);
+        const rotationZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), this.transform.rotateZ);
+
+        const m = new THREE.Matrix4().fromArray(matrix);
+        const l = new THREE.Matrix4().makeTranslation(this.transform.translateX, this.transform.translateY, this.transform.translateZ)
+            .scale(new THREE.Vector3(this.transform.scale, -this.transform.scale, this.transform.scale))
+            .multiply(rotationX)
+            .multiply(rotationY)
+            .multiply(rotationZ);
+
+        this.camera.projectionMatrix.elements = matrix;
+        this.camera.projectionMatrix = m.multiply(l);
+        this.renderer.state.reset();
+        this.renderer.render(this.scene, this.camera);
+        this.map.triggerRepaint();
+    }
+}
+
+// converts from WGS84 Longitude, Latitude into a unit vector anchor at the top left as needed for GL JS custom layers
+function fromLL(lon,lat) {
+    // derived from https://gist.github.com/springmeyer/871897
+    var extent = 20037508.34;
+
+    var x = lon * extent / 180;
+    var y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
+    y = y * extent / 180;
+
+    return [(x + extent) / (2 * extent), 1 - ((y + extent) / (2 * extent))];
+}
+
+map.on("move",function(e){
+    //判断是否显示室内地图的楼层控制按钮
+    //TODO 现在暂时只有一栋楼，暂时写死 后面ul要灵活生成
+    var features = map.queryRenderedFeatures({ layers: [indoorTransparentName] });
+    if (features.length>0){
+        ul.style.display="block";
+    }else{
+        ul.style.display="none";
+    }
+});
+
+var atNormalPosition=true;
+map.on("click",function(){
+    var object3d=indoorMap.mall.getFloor(2);
+
+    const y=object3d.position.y;
+    var coords={y:y};
+    const offset=800;
+    const end={y:atNormalPosition?y-offset:y+offset};//抽出来or推回去
+    var tween=new TWEEN.Tween(coords) 
+        .to(end,1000)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .onUpdate(function(){
+            object3d.position.y=coords.y;
+        })
+        .start();
+    atNormalPosition=!atNormalPosition;
+})
+
+function animate(time) {
+    requestAnimationFrame(animate);
+    TWEEN.update(time);
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

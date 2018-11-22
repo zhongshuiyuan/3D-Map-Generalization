@@ -357,7 +357,7 @@ IndoorMap3d = function(mapdiv){
         // var zoom = _controls.target.distanceTo(controls.object.position);        
     }
 
-    //判断zoom是否跨过分界点，跨的时候改变显示内容
+    //add by xy 判断zoom是否跨过分界点，跨的时候改变显示内容
     var queueZoom = [1, 1];
     const threshold = 0.6;
     function checkZoom() { 
@@ -386,7 +386,7 @@ IndoorMap3d = function(mapdiv){
             }
             _this.renderer.clearDepth();
             _this.renderer.render(_sceneOrtho, _cameraOrtho);
-            checkZoom();//add by xy
+            //checkZoom();//add by xy
         }
 
         _controls.viewChanged = false;
@@ -397,7 +397,10 @@ IndoorMap3d = function(mapdiv){
         if(_this.mall != null && _spriteMaterials.length == 0){
             var images = _theme.pubPointImg;
             for(var key in images){
-                var texture = THREE.ImageUtils.loadTexture(images[key], undefined, redraw);
+                //edit by xy  new version of three.js
+                //var texture = THREE.ImageUtils.loadTexture(images[key], undefined, redraw);
+                var loader = new THREE.TextureLoader();
+                var texture=loader.load(images[key], redraw);
                 var material = new THREE.SpriteMaterial({map:texture});
                 _spriteMaterials[key] = material;
             }
@@ -445,7 +448,8 @@ IndoorMap3d = function(mapdiv){
         for(var i = 0 ; i < spritelist.children.length; i++){
             var sprite = spritelist.children[i];
             var vec = new THREE.Vector3(sprite.oriX * 0.1, 0, -sprite.oriY * 0.1);
-            vec.applyProjection(projectMatrix);
+            //vec.applyProjection(projectMatrix);//edit by xy use new three.js
+            vec.applyMatrix4(projectMatrix);
 
             var x = Math.round(vec.x * _canvasWidthHalf);
             var y = Math.round(vec.y * _canvasHeightHalf);
@@ -612,7 +616,10 @@ IndoorMap3d = function(mapdiv){
 
 
         var spriteMaterial = new THREE.SpriteMaterial(
-            { map: texture, useScreenCoordinates: false } );
+            {
+                map: texture,
+                //useScreenCoordinates: false comment by xy new version of three.js don't have this property
+            });
         var sprite = new THREE.Sprite( spriteMaterial );
         sprite.scale.set(100,50,1.0);
         sprite.width = metrics.width;

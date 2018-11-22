@@ -788,9 +788,9 @@ function ParseModel(json, is3d, theme){
                     floorObj.points.push({ name: funcArea.Name, type: funcArea.Type, position: new THREE.Vector3(center[0] * scale, floorHeight * scale, -center[1] * scale)});
 
                     //solid model
-                    //edit by xy 把房间变矮
+                    //edit by xy 把房间变矮 new version of three.js amount-->depth
                     //extrudeSettings = {amount: floorHeight, bevelEnabled: false};
-                    extrudeSettings = {amount: floorHeight/2, bevelEnabled: false};
+                    extrudeSettings = {depth: floorHeight/2, bevelEnabled: false};
                     geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
                     material = new THREE.MeshLambertMaterial(theme.room(parseInt(funcArea.Type), funcArea.Category));
                     mesh = new THREE.Mesh(geometry, material);
@@ -800,27 +800,28 @@ function ParseModel(json, is3d, theme){
                     floorObj.add(mesh);
 
                     //top wireframe
-                    geometry = shape.createPointsGeometry();
+                    // geometry = shape.createPointsGeometry();//edit by xy new version of three.js
+                    geometry = new THREE.BufferGeometry().setFromPoints(points);
                     wire = new THREE.Line(geometry, new THREE.LineBasicMaterial(theme.strokeStyle));
                     //edit by xy 房间变矮
                     //wire.position.set(0, 0, floorHeight);
                     wire.position.set(0, 0, floorHeight/2);                    
-                    floorObj.add(wire);
+                    //floorObj.add(wire); comment by xy 加到mapbox之后有锯齿
 
                     //bottom wireframe add by xy 在缩小只显示符号的时候画出虚线的轮廓线
                     //.computeLineDistances() has been removed. Use THREE.Line.computeLineDistances() instead.
                     //geometry.computeLineDistances();//必须，否则无虚线
-                    var dashedMaterial = new THREE.LineDashedMaterial( {
-                        color: 0xffffff,
-                        linewidth: 1,
-                        scale: 1,
-                        dashSize: 20,
-                        gapSize: 10,
-                    });
-                    var dashedWire = new THREE.Line(geometry, dashedMaterial);
-                    dashedWire.visible = false;
-                    dashedWire.type = "DashedLine";
-                    floorObj.add(dashedWire);
+                    // var dashedMaterial = new THREE.LineDashedMaterial( {
+                    //     color: 0xffffff,
+                    //     linewidth: 1,
+                    //     scale: 1,
+                    //     dashSize: 20,
+                    //     gapSize: 10,
+                    // });
+                    // var dashedWire = new THREE.Line(geometry, dashedMaterial);
+                    // dashedWire.visible = false;
+                    // dashedWire.type = "DashedLine";
+                    // floorObj.add(dashedWire);
                 }else{
                     funcArea.fillColor = theme.room(parseInt(funcArea.Type), funcArea.Category).color;
                     funcArea.strokeColor = theme.strokeStyle.color;
@@ -848,7 +849,7 @@ function ParseModel(json, is3d, theme){
 
             if (points.length > 0) {
                 shape = new THREE.Shape(points);
-                extrudeSettings = {amount: buildingHeight, bevelEnabled: false};
+                extrudeSettings = {depth: buildingHeight, bevelEnabled: false};//edit by xy amount-->depth new version of three.js
                 geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
                 mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(theme.building));
 
