@@ -132,7 +132,7 @@ var params = {
 var indoorMap = IndoorMap(params);
 indoorMap.load('data/testMapData.json', function(){
     indoorMap.showAllFloors();
-    ul = IndoorMap.getUI(indoorMap);
+    ul = IndoorMap.getUL(indoorMap);
     document.body.appendChild(ul);//是在mapbox的那个窗口里加
     ul.style.display="none";
 });
@@ -225,24 +225,6 @@ map.on("move",function(e){
         ul.style.display="none";
     }
 });
-
-var atNormalPosition=true;
-map.on("click",function(){
-    var object3d=indoorMap.mall.getFloor(2);
-
-    const y=object3d.position.y;
-    var coords={y:y};
-    const offset=800;
-    const end={y:atNormalPosition?y-offset:y+offset};//抽出来or推回去
-    var tween=new TWEEN.Tween(coords) 
-        .to(end,1000)
-        .easing(TWEEN.Easing.Quadratic.Out)
-        .onUpdate(function(){
-            object3d.position.y=coords.y;
-        })
-        .start();
-    atNormalPosition=!atNormalPosition;
-})
 
 function animate(time) {
     requestAnimationFrame(animate);

@@ -1021,3 +1021,71 @@ IndoorMap.getUI = function(indoorMap){
     }
     return _uiRoot;
 }
+
+//add by xy 两种控制楼层的模式 显示全部楼层时，点楼层按钮就是抽出对应楼层；显示单独楼层时，点楼层按钮是切换楼层；两种模式可以切换
+IndoorMap.getUL = function(indoorMap){
+    var _indoorMap = indoorMap;
+    if(_indoorMap == undefined || _indoorMap.mall == null){
+        console.error("the data has not been loaded yet. please call this function in callback")
+        return null;
+    }
+    //create the ul list
+    _uiRoot = document.createElement('ul');
+    _uiRoot.className = 'floorsUI';
+    _uiRoot.mode = _indoorMap.mall.getCurFloorId()===0?"All":"One";//根据当前显示状态选择模式
+
+    if(_indoorMap.is3d) {
+        var li = document.createElement('li');
+        //根据当前模式选择按钮是单个图层还是多个图层
+        li.style.backgroundImage = _uiRoot.mode==="All"?"url('img/all_floors_min.png')":"url('img/one_floor_min.png')";
+        li.style.backgroundRepeat = "no-repeat";
+        li.style.backgroundPosition = "center";
+        _uiRoot.appendChild(li);
+        //切换模式
+        li.onclick = function () {
+            if (_uiRoot.mode === 'All') {
+                _indoorMap.showFloor(1);                
+                _uiRoot.mode = 'One';
+                this.style.backgroundImage = "url('img/one_floor_min.png')";
+            } else { 
+                _indoorMap.showAllFloors();
+                _uiRoot.mode = 'All';
+                this.style.backgroundImage = "url('img/all_floors_min.png')";
+            }
+        }
+    }
+
+    var floors = _indoorMap.mall.jsonData.data.Floors;
+    for(var i = 0; i < floors.length; i++){
+        (function(arg){
+            li = document.createElement('li');
+            text = document.createTextNode(floors[arg].Name);
+            li.appendChild(text);
+            li.atNormalPosition = true;//存储楼层是否没被抽出来在原来的位置上
+            li.onclick = function () {
+                if (_uiRoot.mode === 'One') {//切换楼层
+                    _indoorMap.showFloor(floors[arg]._id);
+                    //updateUI();
+                } else {//抽
+                    if (arg === 0) return;//arg=0就是-1楼 这个抽出来会撞到别的建筑
+                    //this.className = this.atNormalPosition ? "selected" : "";
+                    var object3d=indoorMap.mall.getFloor(arg);
+                    const y=object3d.position.y;
+                    var coords={y:y};
+                    const offset=800;
+                    const end={y:this.atNormalPosition?y-offset:y+offset};//抽出来or推回去
+                    var tween=new TWEEN.Tween(coords) 
+                        .to(end,1000)
+                        .easing(TWEEN.Easing.Quadratic.Out)
+                        .onUpdate(function(){//注意：有个requestAnimationFrame中在update Tween
+                            object3d.position.y=coords.y;
+                        })
+                        .start();
+                    this.atNormalPosition = !this.atNormalPosition;
+                }                
+            }
+            _uiRoot.appendChild(li);
+        })(i);
+    }
+    return _uiRoot;
+}
