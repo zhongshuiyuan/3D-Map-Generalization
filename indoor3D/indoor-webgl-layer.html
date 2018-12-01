@@ -12,13 +12,11 @@
 
 <body>
 <div id='map'></div>
-<!-- 不显示的容纳室内地图的div，必须要有否则会用整个body -->
-<div id='indoorMap'></div>
 
 <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
 <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.js"></script>
-<!-- <script src="js/three.min.js"></script> -->
+<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>   
 <script src="js/Detector.js"></script>
 <script src="js/OrbitControls.js"></script>
 <script src="js/IndoorMap.js"></script>
@@ -107,59 +105,118 @@ const THREE = window.THREE;
 const indoorOutlineName="wuhan_L0";//从L1里扣掉的有室内地图的那些建筑 显示详细室内地图前显示轮廓
 const indoorTransparentName=indoorOutlineName+"transparent";
 const indoorZoomThreshold=layerZoom[layerZoom.length-2]+1;//L1那部分zoom的最开始那1部分显示独栋建筑，后面显示室内地图
-var ul;//楼层控制按钮
+var mapboxIndoors={};//所有室内地图存储在这里
+//不显示的容纳室内地图的div，必须要有否则会用整个body
+var indoorMapDivContainer=document.createElement('div');
+indoorMapDivContainer.id="indoorMapDivContainer";
+document.body.appendChild(indoorMapDivContainer);
 
 //添加与室内地图相关的图层
 map.on('load',function(){
-    var xixi=indoorOutlineName;
+    //添加数据源，两个图层共用
+    map.addSource(indoorOutlineName,{
+        'type': 'geojson',
+        'data':'data/wuhan_L0.geojson'
+    });
+    //L1中扣掉的补上
     var minzoom=layerZoom[layerZoom.length-2];
     var maxzoom=indoorZoomThreshold;
-    map.addSource(xixi,constructSource(xixi));
-    //L1中扣掉的补上
-    map.addLayer(constructLayer(xixi, xixi, xixi, minzoom, maxzoom));
+    map.addLayer(constructLayer(indoorOutlineName, indoorOutlineName, '', minzoom, maxzoom));
     //透明 用于判断是否要显示楼层控制按钮
-    map.addLayer(constructLayer(indoorTransparentName, xixi, xixi, indoorZoomThreshold, 22, 0.0));
-    //添加室内地图并设置显示的级别范围
-    map.addLayer(new ThreeJSIndoor());
-    map.setLayerZoomRange('indoorlayer', indoorZoomThreshold, 22);
+    map.addLayer(constructLayer(indoorTransparentName, indoorOutlineName, '', indoorZoomThreshold, 22, 0.0));
+    //添加室内地图
+    $.getJSON("data/wuhan_L0.geojson",function(data){
+        data.features.forEach(feature=>{
+            var fileName=feature.properties.fileName;
+            var lon=feature.properties.lon;
+            var lat=feature.properties.lat;
+            var angle=feature.properties.angle;
+            var scale=feature.properties.scale;
+            var indoor=new MapboxIndoor(fileName,lon,lat,angle,scale);
+            mapboxIndoors[fileName]=indoor;
+        })
+    })
 })
 
-//室内地图初始化
-var params = {
-    dim: "3d",
-    mapDiv:"indoorMap"
-};
-var indoorMap = IndoorMap(params);
-indoorMap.load('data/testMapData.json', function(){
-    indoorMap.showAllFloors();
-    ul = IndoorMap.getUL(indoorMap);
-    document.body.appendChild(ul);//是在mapbox的那个窗口里加
-    ul.style.display="none";
+map.on("move",function(e){
+    checkIndoorMap();
 });
 
+//判断现有的室内地图 显示其楼层控制按钮 //TODO还没考虑一个画面内有两栋室内地图的情况
+function checkIndoorMap(){    
+    var features = map.queryRenderedFeatures({ layers: [indoorTransparentName] });
+    if (features.length===0){
+        for (var i in mapboxIndoors){
+            mapboxIndoors[i].hideUL();
+        }
+        return;
+    }
+    var feature=features[0];
+    var fileName=feature.properties.fileName;
+    mapboxIndoors[fileName].showUL();
+}
+
+class MapboxIndoor{
+    constructor(fileName,lon,lat,angle,scale){
+        this.ul=null;
+        //创建室内地图的容器（隐藏的）
+        var indoorMapDiv=document.createElement("div");
+        document.getElementById("indoorMapDivContainer").appendChild(indoorMapDiv);
+        indoorMapDiv.id=Math.random().toString();
+        //室内地图初始化
+        var params = {
+            dim: "3d",
+            mapDiv:indoorMapDiv.id
+        };
+        this.indoorMap = IndoorMap(params);
+        //异步加载数据并获取object3d
+        var _this=this;
+        this.indoorMap.load('data/'+fileName, function(){
+            _this.indoorMap.showAllFloors();
+            //添加室内地图到mapbox中并设置显示的级别范围
+            var object3d=_this.indoorMap.mall.root;
+            map.addLayer(new ThreeJSIndoor(fileName,lon,lat,angle,scale,object3d));
+            map.setLayerZoomRange(fileName, indoorZoomThreshold, 22);
+        });
+    }
+
+    showUL(){
+        if (this.ul==null){
+            this.ul = IndoorMap.getUL(this.indoorMap);
+            document.body.appendChild(this.ul);//是在mapbox的那个窗口里加   
+        }
+        this.ul.style.display="block";  
+    }
+
+    hideUL(){
+        if (this.ul){
+            this.ul.style.display="none";
+        }
+    }
+}
+
 class ThreeJSIndoor {
-    constructor() {
-        this.id = 'indoorlayer';
+    constructor(id,lon,lat,angle,scale,object3d) {
+        this.id = id;
         this.type = 'custom';
         this.renderingMode = '3d';
         
         //放置的位置、角度、大小等
-        var translate = fromLL(114.302921,30.550531);
+        var translate = fromLL(lon,lat);
         this.transform = {
             translateX: translate[0],
             translateY: translate[1],
             translateZ: 0.0000000,
             rotateX: Math.PI / 2,
-            rotateY: -6.330223000000004/180*Math.PI,
+            rotateY: angle/180*Math.PI,
             rotateZ: 0,
-            scale: 0.000000013
+            scale: scale
         }
 
         this.camera = new THREE.Camera();
         this.scene = new THREE.Scene();
 
-        this.object3d=indoorMap.mall.root;
-        this.scene.add(this.object3d);
+        this.scene.add(object3d);
 
         // show axes in the screen
         var axes = new THREE.AxesHelper(100);
@@ -214,17 +271,6 @@ function fromLL(lon,lat) {
 
     return [(x + extent) / (2 * extent), 1 - ((y + extent) / (2 * extent))];
 }
-
-map.on("move",function(e){
-    //判断是否显示室内地图的楼层控制按钮
-    //TODO 现在暂时只有一栋楼，暂时写死 后面ul要灵活生成
-    var features = map.queryRenderedFeatures({ layers: [indoorTransparentName] });
-    if (features.length>0){
-        ul.style.display="block";
-    }else{
-        ul.style.display="none";
-    }
-});
 
 function animate(time) {
     requestAnimationFrame(animate);
