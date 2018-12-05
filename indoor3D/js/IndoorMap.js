@@ -714,11 +714,70 @@ IndoorMapLoader.prototype.loadAjaxJSON = function ( context, url, callback, call
 
 };
 
-IndoorMapLoader.prototype.parse = function ( json ) {
-    return ParseModel(json, this.is3d);
+IndoorMapLoader.prototype.parse = function (json) {
+    var standardJson = ParseData(json);//add by xy 
+    //return ParseModel(json, this.is3d);
+    return ParseModel(standardJson, this.is3d);//edit by xy
 };
 
 //-----------------------------the Parser class ---------------------------------------
+//add by xy 解析数据 geojson 蜂鸟 indoor3d 三种来源的数据都转成统一标准的对象字面量
+function ParseData(json) { 
+    //数据模板 基于indoor3d原始的数据格式做减法
+    var standardJson = {};
+    var data = {
+        building: {
+            Outline: [],
+        },
+        Floors: []
+    };
+    var floor = {
+        Outline: [],
+        _id: null,
+        Name:null,
+        PubPoint: [],
+        FuncAreas: []        
+    };
+    var point = {
+        Type: null,
+        Outline: []
+    };
+    var area = {
+        Name: null,
+        Category: null,
+        Outline: [],
+        Center: []
+    };
+    standardJson.data = data;
+    //解析indoor3d的数据 照搬
+    data.building.Outline = json.data.building.Outline;
+    json.data.Floors.forEach(itemFloor => { 
+        var newFloor = {};
+        newFloor.Outline = itemFloor.Outline;
+        newFloor._id = itemFloor._id;
+        newFloor.Name = itemFloor.Name;
+        newFloor.PubPoint = [];
+        newFloor.FuncAreas = [];
+        itemFloor.PubPoint.forEach(itemPubPoint => {
+            var newPubPoint = {};
+            newPubPoint.Type = itemPubPoint.Type;
+            newPubPoint.Outline = itemPubPoint.Outline;
+            newFloor.PubPoint.push(newPubPoint);
+        });
+        itemFloor.FuncAreas.forEach(itemFuncArea => {
+            var newFuncArea = {};
+            newFuncArea.Name = itemFuncArea.Name;
+            newFuncArea.Category = itemFuncArea.Category;
+            newFuncArea.Outline = itemFuncArea.Outline;
+            newFuncArea.Center=itemFuncArea.Center;
+            newFloor.FuncAreas.push(newFuncArea);
+        });
+        data.Floors.push(newFloor);
+    })
+    // console.log(standardJson,json);
+    return standardJson;
+}
+
 function ParseModel(json, is3d, theme){
 
     var mall = new Mall();
@@ -747,9 +806,9 @@ function ParseModel(json, is3d, theme){
             if(is3d) { // for 3d model
                 var floorObj = new THREE.Object3D();
                 //edit by xy 增加楼层之间的间距
-                //floorHeight = floor.High / scale;
-                floorHeight = floor.High / scale * 2;
-                if (floorHeight == 0.0) { //if it's 0, set to 50.0
+                floorHeight = floor.High / scale;
+                //floorHeight = floor.High / scale * 2;
+                if (floorHeight == 0.0||isNaN(floorHeight)) { //if it's 0, set to 50.0 //edit by xy add NaN
                     floorHeight = 50.0;
                 }
                 buildingHeight += floorHeight;
@@ -757,9 +816,9 @@ function ParseModel(json, is3d, theme){
                 shape = new THREE.Shape(points);
                 geometry = new THREE.ShapeGeometry(shape);
                 //comment by xy 这里可以修改地板颜色使得奇数层偶数层颜色不同，好区分
-                //mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(theme.floor));
-                var floorTheme = (i % 2 != 0) ? theme.floorOdd : theme.floorEven;
-                mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(floorTheme));
+                mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(theme.floor));
+                // var floorTheme = (i % 2 != 0) ? theme.floorOdd : theme.floorEven;
+                // mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(floorTheme));
                 mesh.position.set(0, 0, -5);
 
                 floorObj.height = floorHeight;
@@ -789,8 +848,8 @@ function ParseModel(json, is3d, theme){
 
                     //solid model
                     //edit by xy 把房间变矮 new version of three.js amount-->depth
-                    //extrudeSettings = {amount: floorHeight, bevelEnabled: false};
-                    extrudeSettings = {depth: floorHeight/2, bevelEnabled: false};
+                    extrudeSettings = {depth: floorHeight, bevelEnabled: false};
+                    //extrudeSettings = {depth: floorHeight/2, bevelEnabled: false};
                     geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
                     material = new THREE.MeshLambertMaterial(theme.room(parseInt(funcArea.Type), funcArea.Category));
                     mesh = new THREE.Mesh(geometry, material);
@@ -804,8 +863,8 @@ function ParseModel(json, is3d, theme){
                     geometry = new THREE.BufferGeometry().setFromPoints(points);
                     wire = new THREE.Line(geometry, new THREE.LineBasicMaterial(theme.strokeStyle));
                     //edit by xy 房间变矮
-                    //wire.position.set(0, 0, floorHeight);
-                    wire.position.set(0, 0, floorHeight/2);                    
+                    wire.position.set(0, 0, floorHeight);
+                    //wire.position.set(0, 0, floorHeight/2);                    
                     //floorObj.add(wire); comment by xy 加到mapbox之后有锯齿
 
                     //bottom wireframe add by xy 在缩小只显示符号的时候画出虚线的轮廓线
@@ -845,7 +904,8 @@ function ParseModel(json, is3d, theme){
             //building geometry
             building = json.data.building;
             points = parsePoints(building.Outline[0][0]);
-            mall.FrontAngle = building.FrontAngle;
+            // mall.FrontAngle = building.FrontAngle;
+            mall.FrontAngle = 0;//edit by xy 不要这项，全都正北方向
 
             if (points.length > 0) {
                 shape = new THREE.Shape(points);

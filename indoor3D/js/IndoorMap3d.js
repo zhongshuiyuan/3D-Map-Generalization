@@ -506,7 +506,7 @@ IndoorMap3d = function(mapdiv){
         }
         var funcAreaJson = _this.mall.getFloorJson(_this.mall.getCurFloorId()).FuncAreas;
         for(var i = 0 ; i < funcAreaJson.length; i++){
-            var sprite = makeTextSprite(funcAreaJson[i].Name_en, _theme.fontStyle);
+            var sprite = makeTextSprite(funcAreaJson[i].Name, _theme.fontStyle);//edit by xy 改为使用中文的注记
             sprite.oriX = funcAreaJson[i].Center[0];
             sprite.oriY = funcAreaJson[i].Center[1];
             _nameSprites.add(sprite);

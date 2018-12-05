@@ -33,17 +33,17 @@ function GetQueryString(name)
 }
 
 //测试按钮
-var popularitySwitch = true;
-document.getElementById("popularity").addEventListener("click", function () { 
-    var floorObj = map.mall.floors[1];//测试一楼
-    floorObj.children.forEach(object => { 
-        if (object.type == "dynamicsymbol") { 
-            object.visible = popularitySwitch;
-        }
-    })
-    map.redraw();
-    popularitySwitch = !popularitySwitch;
-})
+// var popularitySwitch = true;
+// document.getElementById("popularity").addEventListener("click", function () { 
+//     var floorObj = map.mall.floors[1];//测试一楼
+//     floorObj.children.forEach(object => { 
+//         if (object.type == "dynamicsymbol") { 
+//             object.visible = popularitySwitch;
+//         }
+//     })
+//     map.redraw();
+//     popularitySwitch = !popularitySwitch;
+// })
 
 function addSymbol() {
     var floorObj = map.mall.floors[1];//测试一楼
