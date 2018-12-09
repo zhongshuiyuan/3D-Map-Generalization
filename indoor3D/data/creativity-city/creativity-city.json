@@ -1,0 +1,16 @@
+{
+	"building":{
+		"Center":[12729502.4811, 3571701.2662],
+		"Outline":"floor.geojson"
+	},
+	"Floors": [{
+		"_id": "1",
+		"Name": "F1",
+        "filename": "F1.geojson"
+	},
+	{
+		"_id": "2",
+		"Name": "F2",
+        "filename": "F2.geojson"	
+	}]
+}  

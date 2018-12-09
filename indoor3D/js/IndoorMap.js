@@ -640,6 +640,7 @@ IndoorMapLoader.prototype.load = function ( url, callback, texturePath ) {
 
     var scope = this;
 
+    this.url = url;//add by xy 后面还要读取该文件所在路径下的其他文件
     this.onLoadStart();
     this.loadAjaxJSON( this, url, callback );
 
@@ -715,14 +716,42 @@ IndoorMapLoader.prototype.loadAjaxJSON = function ( context, url, callback, call
 };
 
 IndoorMapLoader.prototype.parse = function (json) {
-    var standardJson = ParseData(json);//add by xy 
     //return ParseModel(json, this.is3d);
+    var standardJson = parseGeojson(json, this.url);//add by xy    
+    //var standardJson = parseIndoor3dData(json);
     return ParseModel(standardJson, this.is3d);//edit by xy
 };
 
 //-----------------------------the Parser class ---------------------------------------
 //add by xy 解析数据 geojson 蜂鸟 indoor3d 三种来源的数据都转成统一标准的对象字面量
-function ParseData(json) { 
+//数据模板 基于indoor3d原始的数据格式做减法
+// var standardJson = {};
+// var data = {
+//     building: {
+//         Outline: [],
+//     },
+//     Floors: []
+// };
+// var floor = {
+//     Outline: [],
+//     _id: null,
+//     Name:null,
+//     PubPoint: [],
+//     FuncAreas: []        
+// };
+// var point = {
+//     Type: null,
+//     Outline: []
+// };
+// var area = {
+//     Name: null,
+//     Category: null,
+//     Outline: [],
+//     Center: []
+// };
+
+//解析indoor3d项目的格式的数据
+function parseIndoor3dData(json) { 
     //数据模板 基于indoor3d原始的数据格式做减法
     var standardJson = {};
     var data = {
@@ -730,23 +759,6 @@ function ParseData(json) {
             Outline: [],
         },
         Floors: []
-    };
-    var floor = {
-        Outline: [],
-        _id: null,
-        Name:null,
-        PubPoint: [],
-        FuncAreas: []        
-    };
-    var point = {
-        Type: null,
-        Outline: []
-    };
-    var area = {
-        Name: null,
-        Category: null,
-        Outline: [],
-        Center: []
     };
     standardJson.data = data;
     //解析indoor3d的数据 照搬
@@ -778,6 +790,89 @@ function ParseData(json) {
     return standardJson;
 }
 
+//解析geojson格式的数据 自己用arcgis画各个楼层 导出geojson 用json文件组织各楼层
+function parseGeojson(canzhao) {//TODO 两个参数 json url
+    //数据模板 基于indoor3d原始的数据格式做减法
+    var standardJson = {};
+    var data = {
+        building: {
+            Outline: [],
+        },
+        Floors: []
+    };
+    standardJson.data = data;
+    
+    //TODO 后面要改为该函数的两个参数
+    var url = "./data/creativity-city/creativity-city.json";
+    var json;
+    $.ajaxSettings.async = false;
+    $.getJSON(url, function (mainJSON) {
+        json = mainJSON;
+    });   
+
+    //获取当前读取的json文件所在的路径
+    var slash = url.lastIndexOf("/");
+    var directory = url.substr(0, slash+1);//不能漏了斜杠本身
+    
+    //后面都是用实际的web墨卡托的坐标减去中心的坐标
+    var centerX = json.building.Center[0];
+    var centerY = json.building.Center[1];
+    
+    //获取建筑边界
+    var borderJSON;
+    $.getJSON(directory + json.building.Outline, function (buildingBorderJSON) {
+        borderJSON = buildingBorderJSON;
+    });
+    var borderPoints = borderJSON.features[0].geometry.coordinates[0];
+    var buildingOutline = [];
+    borderPoints.forEach(borderPoint => {
+        buildingOutline.push(borderPoint[0] - centerX);
+        buildingOutline.push(borderPoint[1] - centerY);
+    });
+    data.building.Outline.push([buildingOutline]);
+
+    //遍历各个楼层
+    json.Floors.forEach(floorInfo => {
+        //楼层对象
+        var newFloor = {
+            Outline: data.building.Outline,//TODO 暂时没给每个楼层单独画轮廓
+            _id: floorInfo._id,
+            Name: floorInfo.Name,
+            PubPoint: [],
+            FuncAreas: []
+        };
+        //打开单个楼层的geojson
+        var floorGeoJSON;
+        $.getJSON(directory + floorInfo.filename, function (floorGeoJson) {
+            floorGeoJSON = floorGeoJson;
+        });
+        //遍历每个房间
+        floorGeoJSON.features.forEach(feature => {
+            //房间对象
+            var newFuncArea = {
+                Name: feature.properties.Name,
+                Category: feature.properties.Category,
+                Outline: [],
+                Center: [feature.properties.CenterX, feature.properties.CenterY]
+            };
+            //房间轮廓
+            var points = feature.geometry.coordinates[0];
+            var areaOutline = [];
+            points.forEach(point => {
+                areaOutline.push(point[0] - centerX);
+                areaOutline.push(point[1] - centerY);
+            });
+            newFuncArea.Outline.push([areaOutline]);
+
+            newFloor.FuncAreas.push(newFuncArea);
+        });
+
+        data.Floors.push(newFloor);
+    });
+    console.log(standardJson,canzhao);
+    return standardJson;    
+}
+
 function ParseModel(json, is3d, theme){
 
     var mall = new Mall();
@@ -805,11 +900,10 @@ function ParseModel(json, is3d, theme){
 
             if(is3d) { // for 3d model
                 var floorObj = new THREE.Object3D();
-                //edit by xy 增加楼层之间的间距
                 floorHeight = floor.High / scale;
-                //floorHeight = floor.High / scale * 2;
+                //floorHeight = floor.High / scale * 2;//edit by xy 增加楼层之间的间距
                 if (floorHeight == 0.0||isNaN(floorHeight)) { //if it's 0, set to 50.0 //edit by xy add NaN
-                    floorHeight = 50.0;
+                    floorHeight = 5.0;//change by xy from 50 to 5
                 }
                 buildingHeight += floorHeight;
                 points = parsePoints(floor.Outline[0][0]);
@@ -819,7 +913,7 @@ function ParseModel(json, is3d, theme){
                 mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(theme.floor));
                 // var floorTheme = (i % 2 != 0) ? theme.floorOdd : theme.floorEven;
                 // mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(floorTheme));
-                mesh.position.set(0, 0, -5);
+                mesh.position.set(0, 0, 0);//change by xy from 0 0 -5 to 0 0 0
 
                 floorObj.height = floorHeight;
                 floorObj.add(mesh);
