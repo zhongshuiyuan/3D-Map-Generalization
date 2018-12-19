@@ -626,6 +626,153 @@ var default3dTheme = {
     }
 }
 
+//add by xy 由于光照的影响 效果不太好
+var custom3dTheme = {
+    name: "test", //theme's name
+    background: "#F2F2F2", //background color
+
+    //building's style
+    building: {
+        color: "#000000",
+        opacity: 0.1,
+        transparent: true,
+        depthTest: false
+    },
+
+    //floor's style
+    floor: {
+        color: "#E0E0E0",
+        opacity: 1,
+        transparent: false
+    },
+
+    //add by xy 奇数层和偶数层颜色不一样，好区分
+    floorOdd: {
+        color: "#E0E0E0",
+        opacity: 1,
+        transparent: false
+    },
+
+    floorEven: {
+        color: "#C0C0C0",
+        opacity: 1,
+        transparent: false
+    },
+
+    //selected room's style
+    selected: "#ffff55",
+
+    //rooms' style
+    room: function (type, category) {
+        var roomStyle;
+        if(!category) {
+            switch (type) {
+
+                case 100: //hollow. u needn't change this color. because i will make a hole on the model in the final version.
+                    return {
+                        color: "#F2F2F2",
+                        opacity: 0.8,
+                        transparent: true
+                    }
+                case 300: //closed area
+                    return {
+                        color: "#AAAAAA",
+                        opacity: 0.7,
+                        transparent: true
+                    };
+                case 400: //empty shop
+                    return {
+                        color: "#D3D3D3",
+                        opacity: 0.7,
+                        transparent: true
+                    };
+                default :
+                    break;
+            }
+        }
+
+        switch(category) {
+            case "餐饮":
+                roomStyle = {
+                    color: "#1f77b4",//"#F3E5C7",
+                    opacity: 0.7,
+                    transparent: true
+                };
+                break;
+            case "购物": 
+                roomStyle = {
+                    color: "#aec7e8",//"#DED4E1",
+                    opacity: 0.7,
+                    transparent: true
+                };
+                break;
+            case "电梯":
+            case "楼梯":
+                roomStyle = {
+                    color: "#ffbb78",//"#C6DCE1",
+                    opacity: 0.7,
+                    transparent: true
+                };
+                break;
+            case "未开放区域":
+            case "空铺":
+            case "中空":
+                roomStyle = {
+                    color: "#c49c94",//"#DFDFDF",
+                    opacity: 0.7,
+                    transparent: true
+                };
+                break;
+            case "孵化器":
+            case "客服":
+                roomStyle = {
+                    color: "#dbdb8d",//"#E9DCD8",
+                    opacity: 0.7,
+                    transparent: true
+                };
+                break;
+            case "医药":
+                roomStyle = {
+                    color: "#EE8A31",//"#EDBEB5",
+                    opacity: 0.7,
+                    transparent: true
+                };
+                break;   
+            default:
+                roomStyle = {
+                    color: "#98df8a",
+                    opacity: 0.7,
+                    transparent: true
+                };
+        }
+        return roomStyle;
+    },
+
+    //room wires' style
+    strokeStyle: {
+        color: "#5C4433",
+        opacity: 0.5,
+        transparent: true,
+        linewidth: 2
+    },
+
+    fontStyle:{
+        color: "#231815",
+        fontsize: 40,
+        fontface: "Helvetica, MicrosoftYaHei "
+    },
+
+    pubPointImg: {
+
+        "11001": System.imgPath+"/toilet.png",
+        "11002": System.imgPath+"/ATM.png",
+        "21001": System.imgPath+"/stair.png",
+        "22006": System.imgPath+"/entry.png",
+        "21002": System.imgPath+"/escalator.png",
+        "21003": System.imgPath+"/lift.png"
+    }
+}
+
 //----------------------------the Loader class --------------------------
 IndoorMapLoader= function ( is3d ) {
     THREE.Loader.call( this, is3d );
@@ -636,11 +783,12 @@ IndoorMapLoader= function ( is3d ) {
 
 IndoorMapLoader.prototype = Object.create( THREE.Loader.prototype );
 
-IndoorMapLoader.prototype.load = function ( url, callback, texturePath ) {
+IndoorMapLoader.prototype.load = function ( url, format, callback, texturePath ) {//edit by xy add parameter format
 
     var scope = this;
 
     this.url = url;//add by xy 后面还要读取该文件所在路径下的其他文件
+    this.format = format;//add by xy
     this.onLoadStart();
     this.loadAjaxJSON( this, url, callback );
 
@@ -716,10 +864,23 @@ IndoorMapLoader.prototype.loadAjaxJSON = function ( context, url, callback, call
 };
 
 IndoorMapLoader.prototype.parse = function (json) {
-    //return ParseModel(json, this.is3d);
-    var standardJson = parseGeojson(json, this.url);//add by xy    
-    //var standardJson = parseIndoor3dData(json);
-    return ParseModel(standardJson, this.is3d);//edit by xy
+    //return ParseModel(json, this.is3d); edit by xy 原来只有这行后面都是自己加的
+    switch (this.format) { 
+        case 'indoor3d':
+            return ParseModel(json, this.is3d);
+            break;
+        case 'geojson':
+            var standardJson = parseGeojson(json, this.url);
+            return ParseModel(standardJson, this.is3d, custom3dTheme);
+            break;
+        case 'fengmap':
+            break;
+        default:
+            return ParseModel(json, this.is3d);
+            break;
+    }
+    
+
 };
 
 //-----------------------------the Parser class ---------------------------------------
@@ -750,7 +911,7 @@ IndoorMapLoader.prototype.parse = function (json) {
 //     Center: []
 // };
 
-//解析indoor3d项目的格式的数据
+//解析indoor3d项目的格式的数据 (供实验用，为解析其他格式做准备，实际不会使用)
 function parseIndoor3dData(json) { 
     //数据模板 基于indoor3d原始的数据格式做减法
     var standardJson = {};
@@ -791,7 +952,7 @@ function parseIndoor3dData(json) {
 }
 
 //解析geojson格式的数据 自己用arcgis画各个楼层 导出geojson 用json文件组织各楼层
-function parseGeojson(canzhao) {//TODO 两个参数 json url
+function parseGeojson(json,url) {
     //数据模板 基于indoor3d原始的数据格式做减法
     var standardJson = {};
     var data = {
@@ -801,14 +962,6 @@ function parseGeojson(canzhao) {//TODO 两个参数 json url
         Floors: []
     };
     standardJson.data = data;
-    
-    //TODO 后面要改为该函数的两个参数
-    var url = "./data/creativity-city/creativity-city.json";
-    var json;
-    $.ajaxSettings.async = false;
-    $.getJSON(url, function (mainJSON) {
-        json = mainJSON;
-    });   
 
     //获取当前读取的json文件所在的路径
     var slash = url.lastIndexOf("/");
@@ -820,6 +973,7 @@ function parseGeojson(canzhao) {//TODO 两个参数 json url
     
     //获取建筑边界
     var borderJSON;
+    $.ajaxSettings.async = false;
     $.getJSON(directory + json.building.Outline, function (buildingBorderJSON) {
         borderJSON = buildingBorderJSON;
     });
@@ -843,6 +997,79 @@ function parseGeojson(canzhao) {//TODO 两个参数 json url
         };
         //打开单个楼层的geojson
         var floorGeoJSON;
+        $.ajaxSettings.async = false;
+        $.getJSON(directory + floorInfo.filename, function (floorGeoJson) {
+            floorGeoJSON = floorGeoJson;
+        });
+        //遍历每个房间
+        floorGeoJSON.features.forEach(feature => {
+            //房间对象
+            var newFuncArea = {
+                Name: feature.properties.Name,
+                Category: feature.properties.Category,
+                Outline: [],
+                Center: [feature.properties.CenterX-centerX, feature.properties.CenterY-centerY]
+            };
+            //房间轮廓
+            var points = feature.geometry.coordinates[0];
+            var areaOutline = [];
+            points.forEach(point => {
+                areaOutline.push(point[0] - centerX);
+                areaOutline.push(point[1] - centerY);
+            });
+            newFuncArea.Outline.push([areaOutline]);
+
+            newFloor.FuncAreas.push(newFuncArea);
+        });
+
+        data.Floors.push(newFloor);
+    });
+    return standardJson;    
+}
+
+//解析蜂鸟地图格式的数据
+function parseFengmap(json) { 
+    //数据模板 基于indoor3d原始的数据格式做减法
+    var standardJson = {};
+    var data = {
+        building: {
+            Outline: [],
+        },
+        Floors: []
+    };
+    standardJson.data = data;
+    
+    //后面都是用实际的web墨卡托的坐标减去中心的坐标
+    var centerX = json.building.DefaultCenX;
+    var centerY = json.building.DefaultCenY;
+    
+    //获取建筑边界
+    var borderJSON;
+    $.ajaxSettings.async = false;
+    $.getJSON(directory + json.building.Outline, function (buildingBorderJSON) {
+        borderJSON = buildingBorderJSON;
+    });
+    var borderPoints = borderJSON.features[0].geometry.coordinates[0];
+    var buildingOutline = [];
+    borderPoints.forEach(borderPoint => {
+        buildingOutline.push(borderPoint[0] - centerX);
+        buildingOutline.push(borderPoint[1] - centerY);
+    });
+    data.building.Outline.push([buildingOutline]);
+
+    //遍历各个楼层
+    json.Floors.forEach(floorInfo => {
+        //楼层对象
+        var newFloor = {
+            Outline: data.building.Outline,//TODO 暂时没给每个楼层单独画轮廓
+            _id: floorInfo._id,
+            Name: floorInfo.Name,
+            PubPoint: [],
+            FuncAreas: []
+        };
+        //打开单个楼层的geojson
+        var floorGeoJSON;
+        $.ajaxSettings.async = false;
         $.getJSON(directory + floorInfo.filename, function (floorGeoJson) {
             floorGeoJSON = floorGeoJson;
         });
@@ -869,8 +1096,9 @@ function parseGeojson(canzhao) {//TODO 两个参数 json url
 
         data.Floors.push(newFloor);
     });
-    console.log(standardJson,canzhao);
     return standardJson;    
+
+
 }
 
 function ParseModel(json, is3d, theme){
@@ -1210,6 +1438,8 @@ IndoorMap.getUL = function(indoorMap){
     }
 
     var floors = _indoorMap.mall.jsonData.data.Floors;
+    var rect = IDM.GeomUtil.getBoundingRect(_indoorMap.mall.jsonData.data.building.Outline[0][0]);
+    const offset = 2/3*(rect.br[1] - rect.tl[1]);//抽出来抽多远
     for(var i = 0; i < floors.length; i++){
         (function(arg){
             li = document.createElement('li');
@@ -1221,12 +1451,11 @@ IndoorMap.getUL = function(indoorMap){
                     _indoorMap.showFloor(floors[arg]._id);
                     //updateUI();
                 } else {//抽
-                    if (arg === 0) return;//arg=0就是-1楼 这个抽出来会撞到别的建筑
+                    //if (arg === 0) return;//arg=0就是-1楼 这个抽出来会撞到别的建筑
                     //this.className = this.atNormalPosition ? "selected" : "";
-                    var object3d=indoorMap.mall.getFloor(arg);
+                    var object3d=indoorMap.mall.getFloor(floors[arg]._id);
                     const y=object3d.position.y;
                     var coords={y:y};
-                    const offset=800;
                     const end={y:this.atNormalPosition?y-offset:y+offset};//抽出来or推回去
                     var tween=new TWEEN.Tween(coords) 
                         .to(end,1000)

@@ -82,10 +82,10 @@ IndoorMap3d = function(mapdiv){
     }
 
     //load the map by the json file name
-    this.load = function (fileName, callback) {
+    this.load = function (fileName, format, callback) {//edit by xy add parameter format indoor3d,geojson,fengmap三种格式
         var loader = new IndoorMapLoader(true);
         _theme = default3dTheme;
-        loader.load(fileName, function(mall){
+        loader.load(fileName, format, function(mall){//edit by xy add parameter format
             _this.mall = mall;
             _scene.add(_this.mall.root);
             _scene.mall = mall;

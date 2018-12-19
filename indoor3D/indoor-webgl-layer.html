@@ -128,13 +128,14 @@ map.on('load',function(){
     $.getJSON("data/wuhan_L0.geojson",function(data){
         data.features.forEach(feature=>{
             var fileName=feature.properties.fileName;
+            var format=feature.properties.format;
             var lon=feature.properties.lon;
             var lat=feature.properties.lat;
             var angle=feature.properties.angle;
             var scale=feature.properties.scale;
-            var indoor=new MapboxIndoor(fileName,lon,lat,angle,scale);
+            var indoor=new MapboxIndoor(fileName,format,lon,lat,angle,scale);
             mapboxIndoors[fileName]=indoor;
-        })
+        });
     })
 })
 
@@ -157,7 +158,7 @@ function checkIndoorMap(){
 }
 
 class MapboxIndoor{
-    constructor(fileName,lon,lat,angle,scale){
+    constructor(fileName,format,lon,lat,angle,scale){
         this.ul=null;
         //创建室内地图的容器（隐藏的）
         var indoorMapDiv=document.createElement("div");
@@ -171,7 +172,7 @@ class MapboxIndoor{
         this.indoorMap = IndoorMap(params);
         //异步加载数据并获取object3d
         var _this=this;
-        this.indoorMap.load('data/'+fileName, function(){
+        this.indoorMap.load('data/'+fileName, format,function(){
             _this.indoorMap.showAllFloors();
             //添加室内地图到mapbox中并设置显示的级别范围
             var object3d=_this.indoorMap.mall.root;
@@ -218,9 +219,9 @@ class ThreeJSIndoor {
 
         this.scene.add(object3d);
 
-        // show axes in the screen
-        var axes = new THREE.AxesHelper(100);
-        this.scene.add(axes);
+        // // show axes in the screen
+        // var axes = new THREE.AxesHelper(100);
+        // this.scene.add(axes);
 
         //light
         var light = new THREE.DirectionalLight(0xffffff);

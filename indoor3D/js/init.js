@@ -9,7 +9,8 @@ var buildings = ['data/testMapData.json', 'data/beijing2.json', 'data/shenzhen.j
 var buildingID = GetQueryString("buildingID");
 var data = buildingID ? buildings[buildingID - 1] : buildings[0];
 
-map.load(data, function () {
+//map.load(data, 'indoor3d', function () {
+map.load("./data/creativity-city/creativity-city.json",'geojson', function () {
     //map.setTheme(testTheme);
     map.showAreaNames(true).showPubPoints(true).setSelectable(true).showFloor(1);
     var ul = IndoorMap.getUI(map);
@@ -237,19 +238,51 @@ function assignUVs(geometry) {
 }
 
 //列举数据里每种类型的店各有哪些
-function listCategory() { 
-    // var categories = {};
-    // for (var i = 1; i <= 6; i++) { 
-    //     var funcAreaJson = map.mall.getFloorJson(i).FuncAreas;
-    //     //console.log(funcAreaJson);        
-    //     funcAreaJson.forEach(room => { 
-    //         if (categories[room.Category] == undefined) {
-    //             categories[room.Category] = [];
-    //             categories[room.Category].push(room.Name);
-    //         } else { 
-    //             categories[room.Category].push(room.Name);
-    //         }
-    //     })
-    // }    
-    // console.log(categories);
+// function listCategory() { 
+//     var categories = {};
+//     for (var i = 1; i <= 6; i++) { 
+//         var funcAreaJson = map.mall.getFloorJson(i).FuncAreas;
+//         //console.log(funcAreaJson);        
+//         funcAreaJson.forEach(room => { 
+//             if (categories[room.Category] == undefined) {
+//                 categories[room.Category] = [];
+//                 categories[room.Category].push(room.Name);
+//             } else { 
+//                 categories[room.Category].push(room.Name);
+//             }
+//         })
+//     }    
+//     console.log(categories);
+// }
+//listCategory();
+function listCategory() {
+    //获取数据
+    var directory = "./data/creativity-city/";
+    $.ajaxSettings.async = false;
+    var floorJsons = [];
+    for (var i = 1; i <= 2; i++) { 
+        var floorName = `F${i}.geojson`;
+        $.getJSON(directory+floorName, function (json) {
+            floorJsons[i] = json;
+        });
+    }
+    //遍历每个feature的category
+    var categories = [];
+    floorJsons.forEach(floorJson => { 
+        floorJson.features.forEach(feature => {
+            var category = feature.properties.Category;
+            if (categories.indexOf(category)==-1) { 
+                categories.push(category);
+            }
+        })
+    })
+    //结果
+    console.log(categories);
+}
+
+test();
+function test() { 
+    // $.ajax({url:"data/10347.fmap",success:function(result){
+    //     console.log(result);
+    // }});
 }

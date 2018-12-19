@@ -1,0 +1,61 @@
+{
+	"building":{
+		"Center":[12729502.4811, 3571701.2662],
+	},
+	"Floors": [{
+		"_id": "1",
+		"Name": "F1",
+        "filename": "F1.geojson"
+	},
+	{
+		"_id": "2",
+		"Name": "F2",
+        "filename": "F2.geojson"	
+	},
+	{
+		"_id": "3",
+		"Name": "F3",
+        "filename": "F3.geojson"	
+	},
+	{
+		"_id": "4",
+		"Name": "F4",
+        "filename": "F4.geojson"	
+	},
+	{
+		"_id": "5",
+		"Name": "F5",
+        "filename": "F5.geojson"	
+	},
+	{
+		"_id": "6",
+		"Name": "F6",
+        "filename": "F6.geojson"	
+	},
+	{
+		"_id": "7",
+		"Name": "F7",
+        "filename": "F7.geojson"	
+	},
+	{
+		"_id": "8",
+		"Name": "F8",
+        "filename": "F8.geojson"	
+	},
+	{
+		"_id": "9",
+		"Name": "F9",
+        "filename": "F9.geojson"	
+	},
+	{
+		"_id": "10",
+		"Name": "F10",
+        "filename": "F10.geojson"	
+	},
+	{
+		"_id": "11",
+		"Name": "F11",
+        "filename": "F11.geojson"	
+	}
+    ]
+}  
