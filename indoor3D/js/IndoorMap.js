@@ -694,54 +694,190 @@ var custom3dTheme = {
         switch(category) {
             case "餐饮":
                 roomStyle = {
-                    color: "#1f77b4",//"#F3E5C7",
-                    opacity: 0.7,
+                    color: "#FF6633",//"#FFB41E",//0"#1f77b4",//"#F3E5C7",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "美容美发":
+                roomStyle = {
+                    color: "#E9967A",
+                    opacity: 0.8,
                     transparent: true
                 };
                 break;
             case "购物": 
                 roomStyle = {
-                    color: "#aec7e8",//"#DED4E1",
-                    opacity: 0.7,
+                    color: "#87CEEB",//"#FA8072",//0"#aec7e8",//"#DED4E1",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "电影院":
+                roomStyle = {
+                    color: "#BC8f8f",
+                    opacity: 0.8,
                     transparent: true
                 };
                 break;
             case "电梯":
-            case "楼梯":
                 roomStyle = {
-                    color: "#ffbb78",//"#C6DCE1",
-                    opacity: 0.7,
-                    transparent: true
-                };
+                color: "#696969",
+                opacity: 0.8,
+                transparent: true
+            };
                 break;
-            case "未开放区域":
-            case "空铺":
-            case "中空":
+            case "公司企业":
                 roomStyle = {
-                    color: "#c49c94",//"#DFDFDF",
-                    opacity: 0.7,
+                    color: "#DEB887",
+                    opacity: 0.8,
                     transparent: true
                 };
                 break;
             case "孵化器":
+                roomStyle = {
+                    color: "#FFA07A",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "楼梯":
+                roomStyle = {
+                    color: "#808080",//"#87CEFA",//0"#C6DCE1",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "未开放区域":
+            roomStyle = {
+                color: "#FFEBCD",//"#FFB41E",//0"#1f77b4",//"#F3E5C7",
+                opacity: 0.8,
+                transparent: true
+            };
+            break;
+            case "线下体验":
+                roomStyle = {
+                    color: "#FFc0cb",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "摄影店":
+                roomStyle = {
+                    color: "#7FFFD4",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "照相馆":
+                roomStyle = {
+                    color: "#7FFFD4",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "生活服务":
+                roomStyle = {
+                    color: "#FF69B4",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "空铺":
+                roomStyle = {
+                    color: "#FF6600",//"#FFB41E",//0"#1f77b4",//"#F3E5C7",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "中空":
+                roomStyle = {
+                    color: "#F0E68C",//"#c49c94",//"#DFDFDF",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "孵化器":
+                roomStyle = {
+                    color: "#FF6600",//"#FFB41E",//0"#1f77b4",//"#F3E5C7",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
             case "客服":
                 roomStyle = {
-                    color: "#dbdb8d",//"#E9DCD8",
-                    opacity: 0.7,
+                    color: "#00FFFF",//"#00FA9A",//"#dbdb8d",//"#E9DCD8",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "休息区":
+                roomStyle = {
+                    color: "#AFEEEE",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "培训机构":
+                roomStyle = {
+                    color: "#D2B48C",//"#BA55D3"
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "教育机构":
+                roomStyle = {
+                    color: "#FFA07A",//"#D2B48C",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "网咖":
+                roomStyle = {
+                    color: "#DA70D6",//"#BA55D3"
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "医疗":
+                roomStyle = {
+                    color: "#F08080",//"#EE8A31",//"#EDBEB5",
+                    opacity: 0.8,
                     transparent: true
                 };
                 break;
             case "医药":
                 roomStyle = {
-                    color: "#EE8A31",//"#EDBEB5",
-                    opacity: 0.7,
+                    color: "#CD5C5C",//"#EE8A31",//"#EDBEB5",
+                    opacity: 0.8,
                     transparent: true
                 };
-                break;   
+                break;
+            case "母婴店":
+                roomStyle = {
+                    color: "#ff99cc",//"#BA55D3"
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "台球厅":
+                roomStyle = {
+                    color: "#CC66CC",//"#EE8A31",//"#EDBEB5",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
+            case "儿童活动区":
+                roomStyle = {
+                    color: "#FFb6c1",
+                    opacity: 0.8,
+                    transparent: true
+                };
+                break;
             default:
                 roomStyle = {
-                    color: "#98df8a",
-                    opacity: 0.7,
+                    color: "#CCFFFF",//"#98df8a"0,
+                    opacity: 0.8,
                     transparent: true
                 };
         }
@@ -970,26 +1106,12 @@ function parseGeojson(json,url) {
     //后面都是用实际的web墨卡托的坐标减去中心的坐标
     var centerX = json.building.Center[0];
     var centerY = json.building.Center[1];
-    
-    //获取建筑边界
-    var borderJSON;
-    $.ajaxSettings.async = false;
-    $.getJSON(directory + json.building.Outline, function (buildingBorderJSON) {
-        borderJSON = buildingBorderJSON;
-    });
-    var borderPoints = borderJSON.features[0].geometry.coordinates[0];
-    var buildingOutline = [];
-    borderPoints.forEach(borderPoint => {
-        buildingOutline.push(borderPoint[0] - centerX);
-        buildingOutline.push(borderPoint[1] - centerY);
-    });
-    data.building.Outline.push([buildingOutline]);
 
     //遍历各个楼层
     json.Floors.forEach(floorInfo => {
         //楼层对象
         var newFloor = {
-            Outline: data.building.Outline,//TODO 暂时没给每个楼层单独画轮廓
+            Outline: [],
             _id: floorInfo._id,
             Name: floorInfo.Name,
             PubPoint: [],
@@ -1001,29 +1123,50 @@ function parseGeojson(json,url) {
         $.getJSON(directory + floorInfo.filename, function (floorGeoJson) {
             floorGeoJSON = floorGeoJson;
         });
-        //遍历每个房间
+        //遍历每个要素
         floorGeoJSON.features.forEach(feature => {
-            //房间对象
-            var newFuncArea = {
-                Name: feature.properties.Name,
-                Category: feature.properties.Category,
-                Outline: [],
-                Center: [feature.properties.CenterX-centerX, feature.properties.CenterY-centerY]
-            };
-            //房间轮廓
-            var points = feature.geometry.coordinates[0];
-            var areaOutline = [];
-            points.forEach(point => {
-                areaOutline.push(point[0] - centerX);
-                areaOutline.push(point[1] - centerY);
-            });
-            newFuncArea.Outline.push([areaOutline]);
+            //添加原始房间数据
+            if (feature.properties.level === "1") {
+                //房间对象
+                var newFuncArea = {
+                    Name: feature.properties.Name,
+                    Category: feature.properties.Category,
+                    Outline: [],
+                    Center: [feature.properties.CenterX - centerX, feature.properties.CenterY - centerY]
+                };
+                //房间轮廓
+                var points = feature.geometry.coordinates[0];
+                var areaOutline = [];
+                points.forEach(point => {
+                    areaOutline.push(point[0] - centerX);
+                    areaOutline.push(point[1] - centerY);
+                });
+                newFuncArea.Outline.push([areaOutline]);
 
-            newFloor.FuncAreas.push(newFuncArea);
+                newFloor.FuncAreas.push(newFuncArea);
+            }
+            //添加楼层的轮廓
+            else if (feature.properties.level === "boundary") { 
+                var boundaryPoints = feature.geometry.coordinates[0];
+                var floorOutline = [];
+                boundaryPoints.forEach(boundaryPoint => {
+                    floorOutline.push(boundaryPoint[0] - centerX);
+                    floorOutline.push(boundaryPoint[1] - centerY);
+                });
+                newFloor.Outline.push([floorOutline]);
+            }
         });
 
         data.Floors.push(newFloor);
     });
+
+    //用一楼的边界作为建筑的边界
+    data.Floors.forEach(floor => {
+        if (floor._id == "1") {
+            data.building.Outline = floor.Outline;
+        }
+    });
+
     return standardJson;    
 }
 
@@ -1166,12 +1309,13 @@ function ParseModel(json, is3d, theme){
                     shape = new THREE.Shape(points);
 
                     var center = funcArea.Center;
-                    floorObj.points.push({ name: funcArea.Name, type: funcArea.Type, position: new THREE.Vector3(center[0] * scale, floorHeight * scale, -center[1] * scale)});
+                    //add by xy 加了个Category:funcArea.Category可以删掉 测试用
+                    floorObj.points.push({ name: funcArea.Name, type: funcArea.Type, Category:funcArea.Category, position: new THREE.Vector3(center[0] * scale, floorHeight * scale, -center[1] * scale)});
 
                     //solid model
                     //edit by xy 把房间变矮 new version of three.js amount-->depth
-                    extrudeSettings = {depth: floorHeight, bevelEnabled: false};
-                    //extrudeSettings = {depth: floorHeight/2, bevelEnabled: false};
+                    extrudeSettings = {depth: floorHeight/2, bevelEnabled: false};
+                    //extrudeSettings = {depth: floorHeight/3, bevelEnabled: false};
                     geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
                     material = new THREE.MeshLambertMaterial(theme.room(parseInt(funcArea.Type), funcArea.Category));
                     mesh = new THREE.Mesh(geometry, material);
@@ -1186,7 +1330,7 @@ function ParseModel(json, is3d, theme){
                     wire = new THREE.Line(geometry, new THREE.LineBasicMaterial(theme.strokeStyle));
                     //edit by xy 房间变矮
                     wire.position.set(0, 0, floorHeight);
-                    //wire.position.set(0, 0, floorHeight/2);                    
+                    //wire.position.set(0, 0, floorHeight/3);                    
                     //floorObj.add(wire); comment by xy 加到mapbox之后有锯齿
 
                     //bottom wireframe add by xy 在缩小只显示符号的时候画出虚线的轮廓线
@@ -1440,7 +1584,8 @@ IndoorMap.getUL = function(indoorMap){
     var floors = _indoorMap.mall.jsonData.data.Floors;
     var rect = IDM.GeomUtil.getBoundingRect(_indoorMap.mall.jsonData.data.building.Outline[0][0]);
     const offset = 2/3*(rect.br[1] - rect.tl[1]);//抽出来抽多远
-    for(var i = 0; i < floors.length; i++){
+    for (var i = floors.length - 1; i >= 0;i--){
+    //for (var i = 0; i < floors.length; i++){
         (function(arg){
             li = document.createElement('li');
             text = document.createTextNode(floors[arg].Name);

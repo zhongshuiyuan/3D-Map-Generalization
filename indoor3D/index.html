@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html>
-<head lang="en">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0 maximum-scale=1.0 user-scalable=no">
-    <title></title>
+<head>
+    <title>indoor map</title>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden;}
+        html, body, #map { height: 100%; }
+    </style>
 </head>
+
 <body>
-<!-- <button id="test" style="position:absolute;top:5px;left:5px;z-index:1001">测试按钮</button> -->
-<!-- <button id="popularity" style="position:absolute;top:5px;left:5px;z-index:1001">人气</button> -->
+<div id='map'></div>
+
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.js"></script>
-<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>  
-<!-- <script src="js/three.min.js"></script> -->
+<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>   
 <script src="js/Detector.js"></script>
 <script src="js/OrbitControls.js"></script>
 <script src="js/IndoorMap.js"></script>
@@ -20,10 +26,382 @@
 <script src="js/IndoorMap3d.js"></script>
 <script src="js/Theme.js"></script>
 <link href="css/indoor3D.css" rel="stylesheet">
-<!-- <script src="js/loaders/DDSLoader.js"></script>
-<script src="js/loaders/MTLLoader.js"></script>
-<script src="js/loaders/OBJMTLLoader.js"></script> -->
-<script src="js/loaders/shader.js"></script>
-<script src="js/init.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/16.3.5/Tween.min.js"></script>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiYXJzbHh5IiwiYSI6ImNqZzRzemViajJ4MWUzM3Bjc3Z2M283ajMifQ.VuhGIVxu7Y9H7V4gUxTMdw';
+var map = window.map = new mapboxgl.Map({
+    container: 'map',
+    zoom: 17,
+    center: [114.350878, 30.53011],
+    bearing: 0,
+    pitch: 60,
+    style: 'mapbox://styles/arslxy/cjqly7jm000eq2ro676n5s68d',
+    hash: true
+});
+map.addControl(new mapboxgl.NavigationControl());
+
+var layerZoom = [11, 12, 13, 14, 15, 15.5, 16, 16.5, 17, 22];
+
+//换数据 每个级别的数据都添加进去
+function addBuildingForCity(cityName) { 
+    for (var i = 1; i <= 9; i++){
+        var xixi=cityName+'_L'+i.toString();
+        var minLevel = layerZoom[9 - i];//特定缩放级别对应特定数据
+        var maxLevel = layerZoom[10 - i];
+        map.addSource(xixi,constructSource(xixi));
+        map.addLayer(constructLayer(xixi, xixi, xixi, minLevel, maxLevel));
+    }
+}
+
+//根据图层名称，构造数据源
+function constructSource(mySource){
+    return   {
+        'type':'vector',
+        'scheme':'tms',
+        'tiles':['http://119.29.113.175/geoserver/gwc/service/tms/1.0.0/moreLevel%3A'+mySource+'@EPSG:900913@pbf/{z}/{x}/{y}.pbf']
+    };                
+}
+
+//构造图层，添加图层用，不同的缩放级别范围对应不同数据源
+function constructLayer(myId,mySource,myLayer,myMin,myMax,opactiy=0.8){
+    return {
+        'id': myId,
+        'source': mySource,
+        'source-layer': myLayer,
+        'type': 'fill-extrusion',
+        'minzoom': myMin,
+        'maxzoom': myMax,
+        'paint': {
+            'fill-extrusion-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'height'],
+                0, 'rgb(255,255,191)',
+                20, 'rgb(253,174,97)',
+                40, "rgb(215,25,28)",
+            ],
+            //'fill-extrusion-height': ['get', 'height'],
+            //对于较高的建筑，高度可以适当拔高，不一定要线性的
+            'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['get', 'height'],
+                0, 0,
+                20, 100,
+                40, 200,
+                60, 300
+            ],
+            'fill-extrusion-opacity': opactiy,
+        }
+    };
+}
+
+map.on('load', function() {
+    addBuildingForCity("wuhan");
+});
+
+//*************室内地图部分分割线****************// 
+const THREE = window.THREE;
+const indoorOutlineName="indoor";
+const indoorTransparentName=indoorOutlineName+"transparent";
+const indoorZoomThreshold=layerZoom[layerZoom.length-3];//L2 L1开始都显示室内地图
+var mapboxIndoors={};//所有室内地图对象存储在这里
+//不显示的容纳室内地图的div，必须要有否则会用整个body
+var indoorMapDivContainer=document.createElement('div');
+indoorMapDivContainer.id="indoorMapDivContainer";
+document.body.appendChild(indoorMapDivContainer);
+
+//添加与室内地图相关的图层
+map.on('load',function(){
+    map.addSource(indoorOutlineName,{
+        'type': 'geojson',
+        'data':'data/indoor.geojson'
+    });   
+    //透明 用于判断是否要显示楼层控制按钮
+    map.addLayer(constructLayer(indoorTransparentName, indoorOutlineName, '', indoorZoomThreshold, 22, 0.0));
+    //添加室内地图
+    $.getJSON("data/indoor.geojson",function(data){
+        data.features.forEach(feature=>{
+            var fileName=feature.properties.fileName;
+            var format=feature.properties.format;
+            var lon=feature.properties.lon;
+            var lat=feature.properties.lat;
+            var angle=feature.properties.angle;
+            var scale=feature.properties.scale;
+            var indoor=new MapboxIndoor(fileName,format,lon,lat,angle,scale);
+            mapboxIndoors[fileName]=indoor;
+        });
+    })
+})
+
+map.on("move",function(e){
+    checkIndoorMap();
+});
+
+//判断现有的室内地图 显示其楼层控制按钮 //TODO还没考虑一个画面内有两栋室内地图的情况
+function checkIndoorMap(){    
+    var features = map.queryRenderedFeatures({ layers: [indoorTransparentName] });
+    if (features.length===0){
+        for (var i in mapboxIndoors){
+            mapboxIndoors[i].hideUL();
+        }
+        return;
+    }
+    var feature=features[0];
+    var fileName=feature.properties.fileName;
+    mapboxIndoors[fileName].showUL();
+}
+
+class MapboxIndoor{
+    constructor(fileName,format,lon,lat,angle,scale){
+        this.ul=null;
+        //创建室内地图的容器（隐藏的）
+        var indoorMapDiv=document.createElement("div");
+        document.getElementById("indoorMapDivContainer").appendChild(indoorMapDiv);
+        indoorMapDiv.id=Math.random().toString();
+        //室内地图初始化
+        var params = {
+            dim: "3d",
+            mapDiv:indoorMapDiv.id
+        };
+        this.indoorMap = IndoorMap(params);
+        //异步加载数据并获取object3d
+        var _this=this;
+        this.indoorMap.load('data/'+fileName, format,function(){
+            _this.indoorMap.showAllFloors();
+            //添加室内地图到mapbox中并设置显示的级别范围
+            var object3d=_this.indoorMap.mall.root;
+            map.addLayer(new ThreeJSIndoor(fileName,lon,lat,angle,scale,object3d));
+            map.setLayerZoomRange(fileName, indoorZoomThreshold, 22);
+        });
+    }
+
+    showUL(){
+        if (this.ul==null){
+            this.ul = IndoorMap.getUL(this.indoorMap);
+            document.body.appendChild(this.ul);//是在mapbox的那个窗口里加   
+        }
+        this.ul.style.display="block";  
+    }
+
+    hideUL(){
+        if (this.ul){
+            this.ul.style.display="none";
+        }
+    }
+}
+
+class ThreeJSIndoor {
+    constructor(id,lon,lat,angle,scale,object3d) {
+        this.id = id;
+        this.type = 'custom';
+        this.renderingMode = '3d';
+        
+        //放置的位置、角度、大小等
+        var translate = fromLL(lon,lat);
+        this.transform = {
+            translateX: translate[0],
+            translateY: translate[1],
+            translateZ: 0.0000000,
+            rotateX: Math.PI / 2,
+            rotateY: angle/180*Math.PI,
+            rotateZ: 0,
+            scale: scale
+        }
+
+        this.camera = new THREE.Camera();
+        this.scene = new THREE.Scene();
+
+        this.scene.add(object3d);
+
+        // // show axes in the screen
+        // var axes = new THREE.AxesHelper(100);
+        // this.scene.add(axes);
+
+        //light
+        var light = new THREE.DirectionalLight(0xffffff);
+        light.position.set(-500, 500, -500);
+        this.scene.add(light);
+
+        var light = new THREE.DirectionalLight(0xffffff);
+        light.position.set(500, 500, 500);
+        this.scene.add(light);
+    }
+    onAdd(map, gl) {
+        this.map = map;
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: map.getCanvas(),
+            context: gl,
+            antialias:true,
+            precision:"highp"
+        });
+        this.renderer.autoClear = false;
+    }
+    render(gl, matrix) {
+        const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), this.transform.rotateX);
+        const rotationY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), this.transform.rotateY);
+        const rotationZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), this.transform.rotateZ);
+
+        const m = new THREE.Matrix4().fromArray(matrix);
+        const l = new THREE.Matrix4().makeTranslation(this.transform.translateX, this.transform.translateY, this.transform.translateZ)
+            .scale(new THREE.Vector3(this.transform.scale, -this.transform.scale, this.transform.scale))
+            .multiply(rotationX)
+            .multiply(rotationY)
+            .multiply(rotationZ);
+
+        this.camera.projectionMatrix.elements = matrix;
+        this.camera.projectionMatrix = m.multiply(l);
+        this.renderer.state.reset();
+        this.renderer.render(this.scene, this.camera);
+        this.map.triggerRepaint();
+    }
+}
+
+// converts from WGS84 Longitude, Latitude into a unit vector anchor at the top left as needed for GL JS custom layers
+function fromLL(lon,lat) {
+    // derived from https://gist.github.com/springmeyer/871897
+    var extent = 20037508.34;
+
+    var x = lon * extent / 180;
+    var y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
+    y = y * extent / 180;
+
+    return [(x + extent) / (2 * extent), 1 - ((y + extent) / (2 * extent))];
+}
+
+function animate(time) {
+    requestAnimationFrame(animate);
+    TWEEN.update(time);
+}
+requestAnimationFrame(animate);
+
+// //测试
+// function LightenDarkenColor(col, amt) {
+  
+//   var usePound = false;
+
+//   if (col[0] == "#") {
+//       col = col.slice(1);
+//       usePound = true;
+//   }
+
+//   var num = parseInt(col,16);
+
+//   var r = (num >> 16) + amt;
+
+//   if (r > 255) r = 255;
+//   else if  (r < 0) r = 0;
+
+//   var b = ((num >> 8) & 0x00FF) + amt;
+
+//   if (b > 255) b = 255;
+//   else if  (b < 0) b = 0;
+
+//   var g = (num & 0x0000FF) + amt;
+
+//   if (g > 255) g = 255;
+//   else if (g < 0) g = 0;
+
+//   return (usePound?"#":"") + (g | (b << 8) | (r << 16)).toString(16);
+
+// }
+
+// var havntAddedIcons=true;
+// map.on("click",function(){
+//     if (havntAddedIcons){
+//         addIcons();
+//         addWall();
+//         havntAddedIcons=!havntAddedIcons;
+//     }    
+//     //grey();    
+// });
+
+// function grey(){
+//     var layer=map.getLayer("creative city/main.json");
+//     var floors=layer.implementation.scene.children[0].children;
+//     var color = new THREE.Color( 0x333333 );
+//     for (var i=1; i<floors.length;i++){
+//         if (i==8) continue;
+//         floors[i].children.forEach(funcArea=>{
+//             funcArea.material.color.addScalar(-0.1);
+//             //funcArea.material.opacity=0.5;
+//             // var color=funcArea.material.color.getHexString();
+//             // var newColor = LightenDarkenColor("#"+color, -20);
+//             // var hex=parseInt("0x"+newColor.substr(1));            
+//             // funcArea.material.color.setHex(hex);
+//         });
+//     }    
+// }
+
+// function addWall(){
+//     var layer=map.getLayer("creative city/main.json");
+//     var floors=layer.implementation.scene.children[0].children;
+    
+//     //加墙 去掉围墙
+//     var geometry = new THREE.PlaneGeometry( 200, 20 );
+//     var material = new THREE.MeshBasicMaterial( {color: 0xc0c0c0, opacity: 0.8,side: THREE.DoubleSide} );
+//     var wall = new THREE.Mesh( geometry, material );
+//     floors[8].add(wall);
+//     wall.rotation.set(Math.PI/2,-Math.PI/360,0);
+//     wall.position.set(-18,36,10);
+//     var layer=map.getLayer("creative city/main.json");
+//     var floors=layer.implementation.scene.children[0].children[0].visible=false;    
+// }
+
+// function addIcons(){
+//     var foodList=["海底捞","锅内锅外","探蛙","北疆饭店","蓝农田园","橘味","绿茶餐厅","拾味馆","西贝莜面","川吉道新派川菜","大渔铁板烧",
+//     "小天鹅火锅","斗牛士牛排餐厅","表哥茶餐厅","","","","","","","","","","","","","","",""];
+//     var drinkList=["大通冰室","漫咖啡","猫与花茶","快乐柠檬","","","","","","","","","","","","","","","",];
+//     var shoppingList=["Cabbeen","4CM","LEGO","米妮可可","小阿福","EGOU","热风","海豚儿童书店","帕拉丁","拉夏集合店","马克华菲"
+//     ,"LILY","白武西","谜底","苹果（售后）"]
+//     var layer=map.getLayer("creative city/main.json");
+//     var floors=layer.implementation.scene.children[0].children;
+//     for (var i=1;i<floors.length;i++){
+//         //if (i==7) continue;
+//         var floor=floors[i];
+//         floor.points.forEach(point=>{
+//             if (foodList.indexOf(point.name)!=-1){
+//                 var bubble = new BubbleIcon(4, [point.position.x, point.position.z],"./img/food.png");
+//                 floor.add(bubble.getBubble());
+//             }
+//             if (drinkList.indexOf(point.name)!=-1){
+//                 var bubble = new BubbleIcon(4, [point.position.x, point.position.z],"./img/drink.png");
+//                 floor.add(bubble.getBubble());
+//             }
+//             if (shoppingList.indexOf(point.name)!=-1){
+//                 var bubble = new BubbleIcon(4, [point.position.x, point.position.z],"./img/shopping1.png");
+//                 floor.add(bubble.getBubble());
+//             }
+//         })
+//     }
+// }
+
+// function BubbleIcon(size,center,url) { 
+//     var _this = this;
+//     var scale=0.1;
+//     var circle;
+//     this.size = size;
+
+//     this.getBubble = function () { 
+//         return circle;
+//     }
+
+//     this.init = function () { 
+//         // create the ground circle
+//         var circleGeometry = new THREE.CircleGeometry(size, 64);
+//         var texture = THREE.ImageUtils.loadTexture(url);
+//         texture.magFilter = THREE.NearestFilter
+//         texture.minFilter = THREE.NearestFilter
+//         circleMaterial = new THREE.MeshBasicMaterial({ map: texture,transparent:true,side:THREE.DoubleSide });
+//         circle = new THREE.Mesh(circleGeometry, circleMaterial);
+//         circle.position.x = center[0]/scale;
+//         circle.position.y = -center[1]/scale;
+//         circle.position.z = 10//size / 2;
+//         circle.rotation.x=Math.PI/2;
+//     }
+    
+//     _this.init();
+// }
+</script>
 </body>
 </html>

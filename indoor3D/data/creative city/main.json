@@ -1,6 +1,18 @@
 {
+	"comment":[
+		{
+			"_id": "10",
+			"Name": "F10",
+			"filename": "F10.geojson"	
+		},
+		{
+			"_id": "11",
+			"Name": "F11",
+			"filename": "F11.geojson"	
+		}
+	],
 	"building":{
-		"Center":[12729502.4811, 3571701.2662],
+		"Center":[12729502.4811, 3571701.2662]
 	},
 	"Floors": [{
 		"_id": "1",
@@ -10,7 +22,7 @@
 	{
 		"_id": "2",
 		"Name": "F2",
-        "filename": "F2.geojson"	
+        "filename": "F2.geojson"
 	},
 	{
 		"_id": "3",
@@ -50,12 +62,12 @@
 	{
 		"_id": "10",
 		"Name": "F10",
-        "filename": "F10.geojson"	
+		"filename": "F10.geojson"	
 	},
 	{
 		"_id": "11",
 		"Name": "F11",
-        "filename": "F11.geojson"	
+		"filename": "F11.geojson"	
 	}
-    ]
-}  
+	]
+}

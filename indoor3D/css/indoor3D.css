@@ -27,8 +27,9 @@
 }
 
 .floorsUI{
-    top:100px;
+    top:50%;
     width: 40px;
+    transform: translateY(-50%);    
 }
 
 .testButton{

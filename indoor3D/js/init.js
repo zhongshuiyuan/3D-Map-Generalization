@@ -10,7 +10,7 @@ var buildingID = GetQueryString("buildingID");
 var data = buildingID ? buildings[buildingID - 1] : buildings[0];
 
 //map.load(data, 'indoor3d', function () {
-map.load("./data/creativity-city/creativity-city.json",'geojson', function () {
+map.load("./data/creative city/main.json",'geojson', function () {
     //map.setTheme(testTheme);
     map.showAreaNames(true).showPubPoints(true).setSelectable(true).showFloor(1);
     var ul = IndoorMap.getUI(map);
@@ -254,30 +254,32 @@ function assignUVs(geometry) {
 //     }    
 //     console.log(categories);
 // }
-//listCategory();
+listCategory();
 function listCategory() {
     //获取数据
-    var directory = "./data/creativity-city/";
+    var directory = "./data/creative city/";
     $.ajaxSettings.async = false;
     var floorJsons = [];
-    for (var i = 1; i <= 2; i++) { 
+    for (var i = 1; i <= 11; i++) { 
         var floorName = `F${i}.geojson`;
         $.getJSON(directory+floorName, function (json) {
             floorJsons[i] = json;
         });
     }
     //遍历每个feature的category
-    var categories = [];
+    var sum = {};
     floorJsons.forEach(floorJson => { 
         floorJson.features.forEach(feature => {
             var category = feature.properties.Category;
-            if (categories.indexOf(category)==-1) { 
-                categories.push(category);
+            if (sum.hasOwnProperty(category)) {
+                sum[category]++;
+            } else { 
+                sum[category] = 0;
             }
         })
     })
     //结果
-    console.log(categories);
+    console.log(sum);
 }
 
 test();
