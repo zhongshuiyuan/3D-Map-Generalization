@@ -289,9 +289,9 @@ function Mall(){
             return;
         }
 
-        _this.root.add(_this.building);
+        //_this.root.add(_this.building); edit by xy 不要建筑轮廓
 
-        var offset = 4;
+        var offset = 10; //edit by xy 可拉大间距 原本是4
         for(var i=0; i<_this.floors.length; i++){
             _this.floors[i].position.set(0,0,i*_this.floors[i].height*offset);
 //            if(i == 4){
@@ -1087,89 +1087,6 @@ function parseIndoor3dData(json) {
     return standardJson;
 }
 
-//解析geojson格式的数据 自己用arcgis画各个楼层 导出geojson 用json文件组织各楼层
-function parseGeojson(json,url) {
-    //数据模板 基于indoor3d原始的数据格式做减法
-    var standardJson = {};
-    var data = {
-        building: {
-            Outline: [],
-        },
-        Floors: []
-    };
-    standardJson.data = data;
-
-    //获取当前读取的json文件所在的路径
-    var slash = url.lastIndexOf("/");
-    var directory = url.substr(0, slash+1);//不能漏了斜杠本身
-    
-    //后面都是用实际的web墨卡托的坐标减去中心的坐标
-    var centerX = json.building.Center[0];
-    var centerY = json.building.Center[1];
-
-    //遍历各个楼层
-    json.Floors.forEach(floorInfo => {
-        //楼层对象
-        var newFloor = {
-            Outline: [],
-            _id: floorInfo._id,
-            Name: floorInfo.Name,
-            PubPoint: [],
-            FuncAreas: []
-        };
-        //打开单个楼层的geojson
-        var floorGeoJSON;
-        $.ajaxSettings.async = false;
-        $.getJSON(directory + floorInfo.filename, function (floorGeoJson) {
-            floorGeoJSON = floorGeoJson;
-        });
-        //遍历每个要素
-        floorGeoJSON.features.forEach(feature => {
-            //添加原始房间数据
-            if (feature.properties.level === "1") {
-                //房间对象
-                var newFuncArea = {
-                    Name: feature.properties.Name,
-                    Category: feature.properties.Category,
-                    Outline: [],
-                    Center: [feature.properties.CenterX - centerX, feature.properties.CenterY - centerY]
-                };
-                //房间轮廓
-                var points = feature.geometry.coordinates[0];
-                var areaOutline = [];
-                points.forEach(point => {
-                    areaOutline.push(point[0] - centerX);
-                    areaOutline.push(point[1] - centerY);
-                });
-                newFuncArea.Outline.push([areaOutline]);
-
-                newFloor.FuncAreas.push(newFuncArea);
-            }
-            //添加楼层的轮廓
-            else if (feature.properties.level === "boundary") { 
-                var boundaryPoints = feature.geometry.coordinates[0];
-                var floorOutline = [];
-                boundaryPoints.forEach(boundaryPoint => {
-                    floorOutline.push(boundaryPoint[0] - centerX);
-                    floorOutline.push(boundaryPoint[1] - centerY);
-                });
-                newFloor.Outline.push([floorOutline]);
-            }
-        });
-
-        data.Floors.push(newFloor);
-    });
-
-    //用一楼的边界作为建筑的边界
-    data.Floors.forEach(floor => {
-        if (floor._id == "1") {
-            data.building.Outline = floor.Outline;
-        }
-    });
-
-    return standardJson;    
-}
-
 //解析蜂鸟地图格式的数据
 function parseFengmap(json) { 
     //数据模板 基于indoor3d原始的数据格式做减法
@@ -1240,8 +1157,92 @@ function parseFengmap(json) {
         data.Floors.push(newFloor);
     });
     return standardJson;    
+}
 
+//解析geojson格式的数据 自己用arcgis画各个楼层 导出geojson 用json文件组织各楼层
+function parseGeojson(json,url) {
+    //数据模板 基于indoor3d原始的数据格式做减法
+    var standardJson = {};
+    var data = {
+        building: {
+            Outline: [],
+        },
+        Floors: []
+    };
+    standardJson.data = data;
 
+    //获取当前读取的json文件所在的路径
+    var slash = url.lastIndexOf("/");
+    var directory = url.substr(0, slash+1);//不能漏了斜杠本身
+    
+    //后面都是用实际的web墨卡托的坐标减去中心的坐标
+    var centerX = json.building.Center[0];
+    var centerY = json.building.Center[1];
+
+    //遍历各个楼层
+    json.Floors.forEach(floorInfo => {
+        //楼层对象
+        var newFloor = {
+            Outline: [],
+            _id: floorInfo._id,
+            Name: floorInfo.Name,
+            PubPoint: [],
+            FuncAreas: []
+        };
+        //打开单个楼层的geojson
+        var floorGeoJSON;
+        $.ajaxSettings.async = false;
+        $.getJSON(directory + floorInfo.filename, function (floorGeoJson) {
+            floorGeoJSON = floorGeoJson;
+        });
+        //遍历每个要素
+        floorGeoJSON.features.forEach(feature => {
+            //添加原始房间数据
+            if (feature.properties.level !== "boundary") {
+                //房间对象
+                var newFuncArea = {
+                    Name: feature.properties.Name,
+                    Category: feature.properties.Category,
+                    Outline: [],
+                    Center: [feature.properties.CenterX - centerX, feature.properties.CenterY - centerY],
+                    level: feature.properties.level//只有geojson格式才有
+                };
+                //房间轮廓 注意带洞的多边形
+                var polygons = feature.geometry.coordinates;
+                polygons.forEach(polygon => { 
+                    var areaOutline = [];
+                    polygon.forEach(point => {
+                        areaOutline.push(point[0] - centerX);
+                        areaOutline.push(point[1] - centerY);
+                    });
+                    newFuncArea.Outline.push([areaOutline]);
+                })
+
+                newFloor.FuncAreas.push(newFuncArea);
+            }
+            //添加楼层的轮廓
+            else if (feature.properties.level === "boundary") { 
+                var boundaryPoints = feature.geometry.coordinates[0];
+                var floorOutline = [];
+                boundaryPoints.forEach(boundaryPoint => {
+                    floorOutline.push(boundaryPoint[0] - centerX);
+                    floorOutline.push(boundaryPoint[1] - centerY);
+                });
+                newFloor.Outline.push([floorOutline]);
+            }
+        });
+
+        data.Floors.push(newFloor);
+    });
+
+    //用一楼的边界作为建筑的边界
+    data.Floors.forEach(floor => {
+        if (floor._id == "1") {
+            data.building.Outline = floor.Outline;
+        }
+    });
+
+    return standardJson;    
 }
 
 function ParseModel(json, is3d, theme){
@@ -1274,7 +1275,7 @@ function ParseModel(json, is3d, theme){
                 floorHeight = floor.High / scale;
                 //floorHeight = floor.High / scale * 2;//edit by xy 增加楼层之间的间距
                 if (floorHeight == 0.0||isNaN(floorHeight)) { //if it's 0, set to 50.0 //edit by xy add NaN
-                    floorHeight = 5.0;//change by xy from 50 to 5
+                    floorHeight = 2.0;//change by xy from 50 to 2
                 }
                 buildingHeight += floorHeight;
                 points = parsePoints(floor.Outline[0][0]);
@@ -1290,6 +1291,12 @@ function ParseModel(json, is3d, theme){
                 floorObj.add(mesh);
                 floorObj.points = [];
                 floorObj._id = floor._id;
+
+                //add by xy 每层楼自己的围墙 效果不太好
+                // extrudeSettings = { depth: floorHeight*10, bevelEnabled: false };//与mall的类里offset遥相呼应
+                // geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                // mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial(theme.building));
+                // floorObj.add(mesh);
 
                 mall.floors.push(floorObj);
             }else{//for 2d model
@@ -1307,6 +1314,16 @@ function ParseModel(json, is3d, theme){
                 if(is3d) {
                     points = parsePoints(funcArea.Outline[0][0]);
                     shape = new THREE.Shape(points);
+                    //add by xy注意带洞多边形
+                    if (funcArea.Outline.length > 1) {
+                        var count = 0;
+                        funcArea.Outline.forEach(polygon => { 
+                            count++;
+                            if (count == 1) return;                            
+                            var holePoints = parsePoints(polygon[0]);
+                            shape.holes.push(new THREE.Shape(holePoints));
+                        })
+                    }
 
                     var center = funcArea.Center;
                     //add by xy 加了个Category:funcArea.Category可以删掉 测试用
@@ -1314,13 +1331,14 @@ function ParseModel(json, is3d, theme){
 
                     //solid model
                     //edit by xy 把房间变矮 new version of three.js amount-->depth
-                    extrudeSettings = {depth: floorHeight/2, bevelEnabled: false};
+                    extrudeSettings = {depth: floorHeight, bevelEnabled: false};
                     //extrudeSettings = {depth: floorHeight/3, bevelEnabled: false};
                     geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
                     material = new THREE.MeshLambertMaterial(theme.room(parseInt(funcArea.Type), funcArea.Category));
                     mesh = new THREE.Mesh(geometry, material);
                     mesh.type = "solidroom";
                     mesh.id = funcArea._id;
+                    mesh.level = funcArea.level;//add by xy 不同zoom显示不同层次的数据
                     
                     floorObj.add(mesh);
 
@@ -1583,9 +1601,9 @@ IndoorMap.getUL = function(indoorMap){
 
     var floors = _indoorMap.mall.jsonData.data.Floors;
     var rect = IDM.GeomUtil.getBoundingRect(_indoorMap.mall.jsonData.data.building.Outline[0][0]);
-    const offset = 2/3*(rect.br[1] - rect.tl[1]);//抽出来抽多远
+    const offset = 2 / 3 * (rect.br[1] - rect.tl[1]);//抽出来抽多远
+    const interval = 30;//_indoorMap.mall.floors[1].position.z;//原本的楼层间隔
     for (var i = floors.length - 1; i >= 0;i--){
-    //for (var i = 0; i < floors.length; i++){
         (function(arg){
             li = document.createElement('li');
             text = document.createTextNode(floors[arg].Name);
@@ -1595,22 +1613,44 @@ IndoorMap.getUL = function(indoorMap){
                 if (_uiRoot.mode === 'One') {//切换楼层
                     _indoorMap.showFloor(floors[arg]._id);
                     //updateUI();
-                } else {//抽
-                    //if (arg === 0) return;//arg=0就是-1楼 这个抽出来会撞到别的建筑
-                    //this.className = this.atNormalPosition ? "selected" : "";
-                    var object3d=indoorMap.mall.getFloor(floors[arg]._id);
-                    const y=object3d.position.y;
-                    var coords={y:y};
-                    const end={y:this.atNormalPosition?y-offset:y+offset};//抽出来or推回去
+                }
+                // else {//抽
+                //     //if (arg === 0) return;//arg=0抽出来可能会撞到别的建筑
+                //     //this.className = this.atNormalPosition ? "selected" : "";
+                //     var object3d=indoorMap.mall.getFloor(floors[arg]._id);
+                //     const y=object3d.position.y;
+                //     var coords={y:y};
+                //     const end={y:this.atNormalPosition?y-offset:y+offset};//抽出来or推回去
+                //     var tween=new TWEEN.Tween(coords) 
+                //         .to(end,1000)
+                //         .easing(TWEEN.Easing.Quadratic.Out)
+                //         .onUpdate(function(){//注意：有个requestAnimationFrame中在update Tween
+                //             object3d.position.y=coords.y;
+                //         })
+                //         .start();
+                //     this.atNormalPosition = !this.atNormalPosition;
+                // }
+                else {//加大间隔 
+                    var coords = {};
+                    var end = {};
+                    for (var j = arg + 1; j < floors.length; j++) { 
+                        var floor = indoorMap.mall.getFloor(floors[j]._id);
+                        coords[floors[j]._id] = floor.position.z;
+                        end[floors[j]._id] = this.atNormalPosition ? floor.position.z + interval : floor.position.z - interval;//加大间隔or减小间隔
+                    }
                     var tween=new TWEEN.Tween(coords) 
                         .to(end,1000)
                         .easing(TWEEN.Easing.Quadratic.Out)
                         .onUpdate(function(){//注意：有个requestAnimationFrame中在update Tween
-                            object3d.position.y=coords.y;
+                            for (var k = arg + 1; k < floors.length; k++) { 
+                                var floor = indoorMap.mall.getFloor(floors[k]._id);
+                                floor.position.z=coords[floors[k]._id];
+                            }
                         })
-                        .start();
+                        .start();                    
                     this.atNormalPosition = !this.atNormalPosition;
-                }                
+                }
+                
             }
             _uiRoot.appendChild(li);
         })(i);

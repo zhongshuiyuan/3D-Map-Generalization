@@ -105,6 +105,7 @@ const THREE = window.THREE;
 const indoorOutlineName="indoor";
 const indoorTransparentName=indoorOutlineName+"transparent";
 const indoorZoomThreshold=layerZoom[layerZoom.length-3];//L2 L1开始都显示室内地图
+const indoorLayerZoom=[indoorZoomThreshold,indoorZoomThreshold+0.3,indoorZoomThreshold+0.6,indoorZoomThreshold+0.9,22];
 var mapboxIndoors={};//所有室内地图对象存储在这里
 //不显示的容纳室内地图的div，必须要有否则会用整个body
 var indoorMapDivContainer=document.createElement('div');
@@ -131,7 +132,7 @@ map.on('load',function(){
             var indoor=new MapboxIndoor(fileName,format,lon,lat,angle,scale);
             mapboxIndoors[fileName]=indoor;
         });
-    })
+    });
 })
 
 map.on("move",function(e){
@@ -139,6 +140,7 @@ map.on("move",function(e){
 });
 
 //判断现有的室内地图 显示其楼层控制按钮 //TODO还没考虑一个画面内有两栋室内地图的情况
+//根据当前的zoom显示特定层次的数据
 function checkIndoorMap(){    
     var features = map.queryRenderedFeatures({ layers: [indoorTransparentName] });
     if (features.length===0){
@@ -150,8 +152,18 @@ function checkIndoorMap(){
     var feature=features[0];
     var fileName=feature.properties.fileName;
     mapboxIndoors[fileName].showUL();
+    var zoom=map.getZoom();
+    var level;
+    for (var i=0;i<indoorLayerZoom.length;i++){
+        if (zoom>indoorLayerZoom[i]&&zoom<indoorLayerZoom[i+1]){
+            level=indoorLayerZoom.length-1-i;
+            break;
+        }
+    }
+    mapboxIndoors[fileName].showSpecificLevelData(level);
 }
 
+//mapbox中的室内地图
 class MapboxIndoor{
     constructor(fileName,format,lon,lat,angle,scale){
         this.ul=null;
@@ -167,7 +179,7 @@ class MapboxIndoor{
         this.indoorMap = IndoorMap(params);
         //异步加载数据并获取object3d
         var _this=this;
-        this.indoorMap.load('data/'+fileName, format,function(){
+        this.indoorMap.load('data/'+fileName, format, function(){
             _this.indoorMap.showAllFloors();
             //添加室内地图到mapbox中并设置显示的级别范围
             var object3d=_this.indoorMap.mall.root;
@@ -189,8 +201,24 @@ class MapboxIndoor{
             this.ul.style.display="none";
         }
     }
+
+    showSpecificLevelData(level){
+        var floors=this.indoorMap.mall.floors;
+        floors.forEach(floor=>{
+            floor.children.forEach(object3d=>{
+                if (!object3d.level) return;//没有设置level的房间，或地板，无论何时都是要显示的
+                if (object3d.level==level){//左边是字符串，右边我暂时设的是数字
+                    object3d.visible=true;
+                }else{
+                    object3d.visible=false;
+                }
+            })
+        })
+
+    }
 }
 
+//threejs中的室内地图模型
 class ThreeJSIndoor {
     constructor(id,lon,lat,angle,scale,object3d) {
         this.id = id;
@@ -198,7 +226,7 @@ class ThreeJSIndoor {
         this.renderingMode = '3d';
         
         //放置的位置、角度、大小等
-        var translate = fromLL(lon,lat);
+        var translate = this.fromLL(lon,lat);
         this.transform = {
             translateX: translate[0],
             translateY: translate[1],
@@ -214,9 +242,9 @@ class ThreeJSIndoor {
 
         this.scene.add(object3d);
 
-        // // show axes in the screen
-        // var axes = new THREE.AxesHelper(100);
-        // this.scene.add(axes);
+        // show axes in the screen
+        var axes = new THREE.AxesHelper(100);
+        this.scene.add(axes);
 
         //light
         var light = new THREE.DirectionalLight(0xffffff);
@@ -227,6 +255,7 @@ class ThreeJSIndoor {
         light.position.set(500, 500, 500);
         this.scene.add(light);
     }
+
     onAdd(map, gl) {
         this.map = map;
         this.renderer = new THREE.WebGLRenderer({
@@ -237,6 +266,7 @@ class ThreeJSIndoor {
         });
         this.renderer.autoClear = false;
     }
+
     render(gl, matrix) {
         const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), this.transform.rotateX);
         const rotationY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), this.transform.rotateY);
@@ -255,20 +285,21 @@ class ThreeJSIndoor {
         this.renderer.render(this.scene, this.camera);
         this.map.triggerRepaint();
     }
+
+    // converts from WGS84 Longitude, Latitude into a unit vector anchor at the top left as needed for GL JS custom layers
+    fromLL(lon,lat) {
+        // derived from https://gist.github.com/springmeyer/871897
+        var extent = 20037508.34;
+
+        var x = lon * extent / 180;
+        var y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
+        y = y * extent / 180;
+
+        return [(x + extent) / (2 * extent), 1 - ((y + extent) / (2 * extent))];
+    }
 }
 
-// converts from WGS84 Longitude, Latitude into a unit vector anchor at the top left as needed for GL JS custom layers
-function fromLL(lon,lat) {
-    // derived from https://gist.github.com/springmeyer/871897
-    var extent = 20037508.34;
-
-    var x = lon * extent / 180;
-    var y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
-    y = y * extent / 180;
-
-    return [(x + extent) / (2 * extent), 1 - ((y + extent) / (2 * extent))];
-}
-
+//抽屉抽出来的动画，后面还可以加其他动画全都在这里控制
 function animate(time) {
     requestAnimationFrame(animate);
     TWEEN.update(time);
