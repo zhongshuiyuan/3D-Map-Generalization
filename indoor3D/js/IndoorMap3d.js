@@ -512,6 +512,7 @@ IndoorMap3d = function(mapdiv){
             _nameSprites.add(sprite);
         }
         _sceneOrtho.add(_nameSprites);
+        //_scene.add(_nameSprites);
     }
 
     //create the pubpoint sprites in a floor by the floor id

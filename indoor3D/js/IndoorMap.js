@@ -1338,7 +1338,12 @@ function ParseModel(json, is3d, theme){
                     mesh = new THREE.Mesh(geometry, material);
                     mesh.type = "solidroom";
                     mesh.id = funcArea._id;
-                    mesh.level = funcArea.level;//add by xy 不同zoom显示不同层次的数据
+                    if (funcArea.level) { //add by xy 不同zoom显示不同层次的数据
+                        mesh.level = funcArea.level;
+                        if (mesh.level != 1) { 
+                            mesh.visible = false;
+                        }
+                    }                    
                     
                     floorObj.add(mesh);
 

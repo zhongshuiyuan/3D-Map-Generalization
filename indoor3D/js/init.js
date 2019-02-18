@@ -9,8 +9,8 @@ var buildings = ['data/testMapData.json', 'data/beijing2.json', 'data/shenzhen.j
 var buildingID = GetQueryString("buildingID");
 var data = buildingID ? buildings[buildingID - 1] : buildings[0];
 
-//map.load(data, 'indoor3d', function () {
-map.load("./data/creative city/main.json",'geojson', function () {
+map.load(data, 'indoor3d', function () {
+//map.load("./data/creative city/main.json",'geojson', function () {
     //map.setTheme(testTheme);
     map.showAreaNames(true).showPubPoints(true).setSelectable(true).showFloor(1);
     var ul = IndoorMap.getUI(map);
