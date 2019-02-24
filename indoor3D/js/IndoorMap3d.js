@@ -166,7 +166,8 @@ IndoorMap3d = function(mapdiv){
         _scene.mall.showFloor(floorid);
         //_this.adjustCamera();//comment by xy 切换楼层保持视角缩放等级
         if(_showPubPoints) {
-            createPubPointSprites(floorid);
+            //createPubPointSprites(floorid);//edit by xy
+            createPoiSprites();
         }
         if(_showNames) {
             createNameSprites(floorid);
@@ -184,8 +185,11 @@ IndoorMap3d = function(mapdiv){
         _this.mall.showAllFloors();
         //_this.adjustCamera();//comment by xy
         redraw();//add by xy 调整相机里包含了重绘
-        clearPubPointSprites();
-        clearNameSprites();
+        // clearPubPointSprites();//edit by xy显示所有楼层时也可以显示注记和符号
+        // clearNameSprites();
+        createNameSprites();
+        createPoiSprites();
+        // createPubPointSprites();
         return _this;
     }
 
@@ -449,70 +453,91 @@ IndoorMap3d = function(mapdiv){
             var sprite = spritelist.children[i];
             var vec = new THREE.Vector3(sprite.oriX * 0.1, 0, -sprite.oriY * 0.1);
             //vec.applyProjection(projectMatrix);//edit by xy use new three.js
-            vec.applyMatrix4(projectMatrix);
+            //vec.applyMatrix4(projectMatrix);//comment by xy
 
-            var x = Math.round(vec.x * _canvasWidthHalf);
-            var y = Math.round(vec.y * _canvasHeightHalf);
-            sprite.position.set(x, y, 1);
+            //var x = Math.round(vec.x * _canvasWidthHalf);//comment by xy
+            //var y = Math.round(vec.y * _canvasHeightHalf);
+            sprite.position.set(vec.x, 10, vec.z);//edit by xy
 
-            //check collision with the former sprites
-            var visible = true;
-            var visibleMargin = 5;
-            for(var j = 0; j < i; j++){
-                var img = sprite.material.map.image;
-                if(!img){ //if img is undefined (the img has not loaded)
-                    visible = false;
-                    break;
-                }
+            //check collision with the former sprites 
+            //先转化成实际在屏幕中显示的坐标和外接矩形，再检测是否冲突，在mapbox中和在three.js的场景中不一样
+            // var visible = true;
+            // var visibleMargin = 5;
+            // for(var j = 0; j < i; j++){
+            //     var img = sprite.material.map.image;
+            //     if(!img){ //if img is undefined (the img has not loaded)
+            //         visible = false;
+            //         break;
+            //     }
 
-                var imgWidthHalf1 = sprite.width / 2;
-                var imgHeightHalf1 = sprite.height / 2;
-                var rect1 = new Rect(sprite.position.x - imgWidthHalf1, sprite.position.y - imgHeightHalf1,
-                        sprite.position.x + imgHeightHalf1, sprite.position.y + imgHeightHalf1 );
+            //     var imgWidthHalf1 = sprite.width / 2;
+            //     var imgHeightHalf1 = sprite.height / 2;
+            //     var rect1 = new Rect(sprite.position.x - imgWidthHalf1, sprite.position.y - imgHeightHalf1,
+            //             sprite.position.x + imgHeightHalf1, sprite.position.y + imgHeightHalf1 );
 
-                var sprite2 = spritelist.children[j];
-                var sprite2Pos = sprite2.position;
-                var imgWidthHalf2 = sprite2.width / 2;
-                var imgHeightHalf2 = sprite2.height / 2;
-                var rect2 = new Rect(sprite2Pos.x - imgWidthHalf2, sprite2Pos.y - imgHeightHalf2,
-                        sprite2Pos.x + imgHeightHalf2, sprite2Pos.y + imgHeightHalf2 );
+            //     var sprite2 = spritelist.children[j];
+            //     var sprite2Pos = sprite2.position;
+            //     var imgWidthHalf2 = sprite2.width / 2;
+            //     var imgHeightHalf2 = sprite2.height / 2;
+            //     var rect2 = new Rect(sprite2Pos.x - imgWidthHalf2, sprite2Pos.y - imgHeightHalf2,
+            //             sprite2Pos.x + imgHeightHalf2, sprite2Pos.y + imgHeightHalf2 );
 
-                if(sprite2.visible && rect1.isCollide(rect2)){
-                    visible = false;
-                    break;
-                }
+            //     if(sprite2.visible && rect1.isCollide(rect2)){
+            //         visible = false;
+            //         break;
+            //     }
 
-                rect1.tl[0] -= visibleMargin;
-                rect1.tl[1] -= visibleMargin;
-                rect2.tl[0] -= visibleMargin;
-                rect2.tl[1] -= visibleMargin;
+            //     rect1.tl[0] -= visibleMargin;
+            //     rect1.tl[1] -= visibleMargin;
+            //     rect2.tl[0] -= visibleMargin;
+            //     rect2.tl[1] -= visibleMargin;
 
 
-                if(sprite.visible == false && rect1.isCollide(rect2)){
-                    visible = false;
-                    break;
-                }
-            }
-            sprite.visible = visible;
+            //     if(sprite.visible == false && rect1.isCollide(rect2)){
+            //         visible = false;
+            //         break;
+            //     }
+            // }
+            // sprite.visible = visible;
         }
     }
 
-    //creat the funcArea Name sprites of a floor
-    function createNameSprites(floorId){
-        if(!_nameSprites){
+    //为每个楼层的所有funcarea创建名称注记 three.js的场景中sprite会一直正对，加到mapbox中还要自己调整角度，大小都要自己调整
+    function createNameSprites(){
+        _this.mall.jsonData.data.Floors.forEach(floor => {
+            var floorObj = _this.mall.getFloor(floor._id);
             _nameSprites = new THREE.Object3D();
-        }else{
-            clearNameSprites();
-        }
-        var funcAreaJson = _this.mall.getFloorJson(_this.mall.getCurFloorId()).FuncAreas;
-        for(var i = 0 ; i < funcAreaJson.length; i++){
-            var sprite = makeTextSprite(funcAreaJson[i].Name, _theme.fontStyle);//edit by xy 改为使用中文的注记
-            sprite.oriX = funcAreaJson[i].Center[0];
-            sprite.oriY = funcAreaJson[i].Center[1];
-            _nameSprites.add(sprite);
-        }
-        _sceneOrtho.add(_nameSprites);
-        //_scene.add(_nameSprites);
+            var funcAreaJson = floor.FuncAreas;
+            for (var i = 0; i < funcAreaJson.length; i++) {
+                var sprite = makeTextSprite(funcAreaJson[i].Name, _theme.fontStyle);
+                sprite.position.set(funcAreaJson[i].Center[0], funcAreaJson[i].Center[1], floorObj.height);//注记高于房间高度这样不会被遮住
+                _nameSprites.add(sprite);
+            }
+            floorObj.add(_nameSprites);
+        });        
+    }
+
+    //为每个楼层的所有大多数主要funcarea创建poi符号
+    function createPoiSprites() { 
+        _this.mall.jsonData.data.Floors.forEach(floor => {
+            var loader = new THREE.TextureLoader();
+            var texture=loader.load("./img/food.png");//先测试一下food的符号
+            var material = new THREE.SpriteMaterial({map:texture});
+
+            var floorObj = _this.mall.getFloor(floor._id);
+            
+            var poiSprites = new THREE.Object3D();
+            var funcAreaJson = floor.FuncAreas;
+            for (var i = 0; i < funcAreaJson.length; i++) {
+                if (funcAreaJson[i].Category === "餐饮") { 
+                    var sprite = new THREE.Sprite(material);
+                    sprite.position.set(funcAreaJson[i].Center[0], funcAreaJson[i].Center[1], 3);//z坐标动态设置，房间拔起来的高度+sprite本身高度的一般
+                    sprite.scale.set(2, 2, 2);
+                    poiSprites.add(sprite);
+                }                
+            }
+            floorObj.add(poiSprites);
+        });     
     }
 
     //create the pubpoint sprites in a floor by the floor id
@@ -533,7 +558,7 @@ IndoorMap3d = function(mapdiv){
         for(var i = 0; i < pubPointsJson.length; i++){
             var spriteMat = _spriteMaterials[pubPointsJson[i].Type];
             if(spriteMat !== undefined) {
-                imgWidth = 30, imgHeight = 30;
+                imgWidth = 8, imgHeight = 8;//edit by xy 改为perspective相机后大小要变 原来是30
                 var sprite = new THREE.Sprite(spriteMat);
                 sprite.scale.set(imgWidth, imgHeight, 1);
                 sprite.oriX = pubPointsJson[i].Outline[0][0][0];
@@ -543,7 +568,8 @@ IndoorMap3d = function(mapdiv){
                 _pubPointSprites.add(sprite);
             }
         }
-        _sceneOrtho.add(_pubPointSprites);
+        //_sceneOrtho.add(_pubPointSprites);
+        _scene.add(_pubPointSprites);//edit by xy
     }
 
     function clearNameSprites(){
@@ -622,7 +648,7 @@ IndoorMap3d = function(mapdiv){
                 //useScreenCoordinates: false comment by xy new version of three.js don't have this property
             });
         var sprite = new THREE.Sprite( spriteMaterial );
-        sprite.scale.set(100,50,1.0);
+        sprite.scale.set(20,10,1.0);//edit by xy 改为perspective相机后大小要变，原来是(100,50,1.0)
         sprite.width = metrics.width;
         sprite.height = fontsize * 1.4;
         return sprite;
