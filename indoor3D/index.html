@@ -15,7 +15,8 @@
 
 <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
 <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.js"></script> -->
+<script src="js/threebox.js"></script>
 <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>   
 <script src="js/Detector.js"></script>
 <script src="js/OrbitControls.js"></script>
@@ -35,7 +36,7 @@ var map = window.map = new mapboxgl.Map({
     center: [114.350878, 30.53011],
     bearing: 0,
     pitch: 60,
-    style: 'mapbox://styles/arslxy/cjqly7jm000eq2ro676n5s68d',
+    style: 'mapbox://styles/arslxy/cjqly7jm000eq2ro676n5s68d',//用去掉建筑的底图
     hash: true
 });
 map.addControl(new mapboxgl.NavigationControl());
@@ -180,10 +181,11 @@ class MapboxIndoor{
         //异步加载数据并获取object3d
         var _this=this;
         this.indoorMap.load('data/'+fileName, format, function(){
-            _this.indoorMap.showAllFloors();
+            _this.indoorMap.showAllFloors().showAreaNames(false).showPubPoints(false);
             //添加室内地图到mapbox中并设置显示的级别范围
             var object3d=_this.indoorMap.mall.root;
-            map.addLayer(new ThreeJSIndoor(fileName,lon,lat,angle,scale,object3d));
+            //map.addLayer(new ThreeJSIndoor(fileName,lon,lat,angle,scale,object3d));
+            map.addLayer(new ThreeboxIndoor(fileName,lon,lat,angle,scale,object3d));
             map.setLayerZoomRange(fileName, indoorZoomThreshold, 22);
         });
     }
@@ -215,6 +217,46 @@ class MapboxIndoor{
             })
         })
 
+    }
+}
+
+//用threebox往mapbox中加载室内地图
+class ThreeboxIndoor {
+    constructor(id,lon,lat,angle,scale,object3d) {
+        this.id = id;
+        this.type = 'custom';
+        this.coordinate=[lon,lat,0];
+        this.scale=scale;
+        this.object3d=object3d;//这个是关键，indoor3d中的root        
+    }
+
+    onAdd(map, gl) {
+        this.threebox = new Threebox(map, gl);
+        this.threebox.setupDefaultLights();
+
+        //把室内地图加到指定位置
+        this.threebox.addAtCoordinate(this.object3d, this.coordinate);
+        //用threebox把three.js中的场景加到mapbox后，x轴向左，y轴向外，z轴向上，要旋转一下
+        this.threebox.world.children[1].rotation.x=-Math.PI/2;
+        this.threebox.world.children[1].rotation.z=-Math.PI;
+        
+        var axes = new THREE.AxesHelper(100);
+        this.threebox.addAtCoordinate(axes, this.coordinate);       
+        this.threebox.world.children[2].rotation.x=-Math.PI/2;
+        this.threebox.world.children[2].rotation.z=-Math.PI;
+
+        //缩放比例本应该是计算出来的，暂时先放着。本应该对整体一起缩放，但是试了缩放threebox.world没反应。
+        //注意不能直接设，因为经过threebox的处理本来已经有了一个很小的scale的值 也可以考虑直接改root的scale，目前是0.1
+        this.threebox.world.children[1].scale.x*=this.scale;
+        this.threebox.world.children[1].scale.y*=this.scale;
+        this.threebox.world.children[1].scale.z*=this.scale;
+        this.threebox.world.children[2].scale.x*=this.scale;
+        this.threebox.world.children[2].scale.y*=this.scale;
+        this.threebox.world.children[2].scale.z*=this.scale;
+    }
+
+    render(gl, matrix) {
+        this.threebox.update(false);
     }
 }
 

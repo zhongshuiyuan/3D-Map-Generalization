@@ -166,12 +166,12 @@ IndoorMap3d = function(mapdiv){
         _scene.mall.showFloor(floorid);
         //_this.adjustCamera();//comment by xy 切换楼层保持视角缩放等级
         if(_showPubPoints) {
-            //createPubPointSprites(floorid);//edit by xy
-            createPoiSprites();
+            createPubPointSprites();
         }
         if(_showNames) {
-            createNameSprites(floorid);
+            createNameSprites();
         }
+        createPoiSprites();//add by xy POI符号始终添加
         redraw();
         return _this;
     }
@@ -185,11 +185,15 @@ IndoorMap3d = function(mapdiv){
         _this.mall.showAllFloors();
         //_this.adjustCamera();//comment by xy
         redraw();//add by xy 调整相机里包含了重绘
-        // clearPubPointSprites();//edit by xy显示所有楼层时也可以显示注记和符号
+        // clearPubPointSprites();//edit by xy显示所有楼层时也可以显示注记和符号，原作者是不显示
         // clearNameSprites();
-        createNameSprites();
-        createPoiSprites();
-        // createPubPointSprites();
+        if(_showPubPoints) {
+            createPubPointSprites();
+        }
+        if (_showNames) { 
+            createNameSprites();
+        }        
+        createPoiSprites();//add by xy POI符号始终添加
         return _this;
     }
 
@@ -502,7 +506,8 @@ IndoorMap3d = function(mapdiv){
         }
     }
 
-    //为每个楼层的所有funcarea创建名称注记 three.js的场景中sprite会一直正对，加到mapbox中还要自己调整角度，大小都要自己调整
+    //为每个楼层的所有funcarea创建名称注记 使用threebox将three.js的场景加到mapbox中sprite会一直正对 
+    //todo 大小保持不变要sizeAttenuation 融合r96的three.js到threebox
     function createNameSprites(){
         _this.mall.jsonData.data.Floors.forEach(floor => {
             var floorObj = _this.mall.getFloor(floor._id);
@@ -518,20 +523,22 @@ IndoorMap3d = function(mapdiv){
     }
 
     //为每个楼层的所有大多数主要funcarea创建poi符号
-    function createPoiSprites() { 
-        _this.mall.jsonData.data.Floors.forEach(floor => {
-            var loader = new THREE.TextureLoader();
-            var texture=loader.load("./img/food.png");//先测试一下food的符号
-            var material = new THREE.SpriteMaterial({map:texture});
+    function createPoiSprites() {
+        //todo 准备好各种符号，要存放到一个对象里
+        var loader = new THREE.TextureLoader();
+        var texture=loader.load("./img/food.png");//先测试一下food的符号
+        var material = new THREE.SpriteMaterial({map:texture});
 
+        //遍历每个楼层，给各个funcarea找到对应的poi符号并加上去
+        _this.mall.jsonData.data.Floors.forEach(floor => {
             var floorObj = _this.mall.getFloor(floor._id);
-            
             var poiSprites = new THREE.Object3D();
             var funcAreaJson = floor.FuncAreas;
             for (var i = 0; i < funcAreaJson.length; i++) {
-                if (funcAreaJson[i].Category === "餐饮") { 
+                if (funcAreaJson[i].Category === "餐饮") {//todo 现在只用餐饮符号试试 
                     var sprite = new THREE.Sprite(material);
-                    sprite.position.set(funcAreaJson[i].Center[0], funcAreaJson[i].Center[1], 3);//z坐标动态设置，房间拔起来的高度+sprite本身高度的一般
+                    //todo z坐标动态设置，房间拔起来的高度+sprite本身高度的一半
+                    sprite.position.set(funcAreaJson[i].Center[0], funcAreaJson[i].Center[1], 3);
                     sprite.scale.set(2, 2, 2);
                     poiSprites.add(sprite);
                 }                
@@ -541,13 +548,12 @@ IndoorMap3d = function(mapdiv){
     }
 
     //create the pubpoint sprites in a floor by the floor id
-    function createPubPointSprites(floorId){
+    function createPubPointSprites(){
         if(!_spriteMaterials.isLoaded){
             loadSprites();
         }
 
         if(!_pubPointSprites) {
-
             _pubPointSprites = new THREE.Object3D();
         }else{
             clearPubPointSprites();

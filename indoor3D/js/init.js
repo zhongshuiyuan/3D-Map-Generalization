@@ -12,7 +12,7 @@ var data = buildingID ? buildings[buildingID - 1] : buildings[0];
 // map.load(data, 'indoor3d', function () {
 map.load("./data/creative city/main.json",'geojson', function () {
     //map.setTheme(testTheme);
-    map.showAreaNames(true).showPubPoints(true).setSelectable(true).showAllFloors();
+    map.showAreaNames(false).showPubPoints(false).setSelectable(true).showAllFloors();
     var ul = IndoorMap.getUI(map);
     document.body.appendChild(ul);
 
